@@ -20,7 +20,8 @@
 :root {
   color-scheme: dark;
   --bg: #0e0e0e;
-  --glass: rgba(14, 14, 14, .46);
+  --glass: rgba(0, 0, 0, .24);
+  --frost: blur(18px) grayscale(1) brightness(.86);
   --glass-solid: #151515;
   --line: rgba(255, 255, 255, .12);
   --line-strong: rgba(255, 255, 255, .5);
@@ -35,6 +36,7 @@
   --top: env(safe-area-inset-top, 0px);
   --bottom: env(safe-area-inset-bottom, 0px);
 }
+*, *::before, *::after { box-sizing: border-box; }
 html, body { height: 100%; overflow: hidden; overscroll-behavior: none; }
 body { background: var(--bg); color: var(--fg); font: 400 15px/1.5 var(--sans); -webkit-tap-highlight-color: transparent; }
 button { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; touch-action: manipulation; }
@@ -52,12 +54,14 @@ button:focus-visible { outline: 1.5px solid var(--fg); outline-offset: 2px; }
 .brand h1 { margin: 0; font-size: 16px; font-weight: 500; line-height: 1.3; letter-spacing: .01em; }
 .brand p { margin: 1px 0 0; font-size: 12.5px; color: rgba(255, 255, 255, .62); }
 .tools { display: flex; gap: 6px; flex: none; pointer-events: auto; }
-.icon { width: 44px; height: 44px; display: grid; place-items: center; border-radius: 50%; background: var(--glass); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); }
+.icon { width: 44px; height: 44px; display: grid; place-items: center; border-radius: 50%; background: var(--glass); backdrop-filter: var(--frost); -webkit-backdrop-filter: var(--frost); }
+.icon[aria-pressed="true"] { background: var(--accent); color: var(--on-accent); }
+.icon svg .fillshape { fill: currentColor; stroke: none; }
 .icon svg { width: 19px; height: 19px; fill: none; stroke: currentColor; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
 
 /* floor plan, drawn to scale from the measured room; translucent so the scan shows through */
 #plan { position: fixed; right: var(--gutter-r); top: calc(70px + var(--top)); width: 96px; height: auto; padding: 6px; border-radius: 8px;
-  background: rgba(0, 0, 0, .18); opacity: .72; transition: opacity .2s, background .2s;
+  background: rgba(0, 0, 0, .18); backdrop-filter: blur(10px) grayscale(1); -webkit-backdrop-filter: blur(10px) grayscale(1); opacity: .72; transition: opacity .2s, background .2s;
   touch-action: none; cursor: grab; user-select: none; -webkit-user-select: none; }
 #plan:hover, #plan:focus-visible, #plan.dragging { opacity: 1; background: rgba(0, 0, 0, .3); }
 #plan:focus-visible { outline: 1.5px solid var(--fg); outline-offset: 2px; }
@@ -72,21 +76,24 @@ button:focus-visible { outline: 1.5px solid var(--fg); outline-offset: 2px; }
 
 .rail { position: fixed; left: 0; right: 0; bottom: 0; padding-top: 36px; padding-bottom: calc(14px + var(--bottom));
   background: linear-gradient(transparent, rgba(0, 0, 0, .5)); pointer-events: none; }
-#hint { display: block; width: fit-content; max-width: calc(100% - 32px); margin: 0 auto 10px; padding: 5px 12px; border-radius: 99px; background: var(--glass); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); font-size: 12.5px; color: rgba(255, 255, 255, .85); text-align: center; transition: opacity .4s; }
+#hint { display: block; width: fit-content; max-width: calc(100% - 32px); margin: 0 auto 10px; padding: 5px 12px; border-radius: 99px; background: var(--glass); backdrop-filter: var(--frost); -webkit-backdrop-filter: var(--frost); font-size: 12.5px; color: rgba(255, 255, 255, .85); text-align: center; transition: opacity .4s; }
 #hint.gone { opacity: 0; }
 /* caption for the chosen view; fades out as soon as the visitor takes the camera */
 #caption { width: min(400px, calc(100% - var(--gutter-l) - var(--gutter-r))); margin: 0 0 10px var(--gutter-l); padding: 12px 14px 13px; border-radius: 12px;
-  background: var(--glass); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); transition: opacity .35s, transform .35s; }
+  background: var(--glass); backdrop-filter: var(--frost); -webkit-backdrop-filter: var(--frost); transition: opacity .35s, transform .35s; }
 #caption.gone { opacity: 0; transform: translateY(6px); pointer-events: none; }
-#caption h2 { margin: 0 0 3px; font-size: 11px; font-weight: 500; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
-#caption p { margin: 0; font-size: 13.5px; line-height: 1.5; color: rgba(255, 255, 255, .9); }
-.chips { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; pointer-events: auto; padding-left: var(--gutter-l); padding-right: var(--gutter-r); scroll-padding-inline: 16px; }
+#caption .body { transition: opacity .28s, transform .28s; }
+#caption .body.swap { opacity: 0; transform: translateY(4px); }
+#caption h2, #caption p { text-shadow: 0 1px 3px rgba(0, 0, 0, .4); }
+#caption h2 { margin: 0 0 3px; font-size: 11px; font-weight: 500; letter-spacing: .12em; text-transform: uppercase; color: rgba(255, 255, 255, .72); }
+#caption p { margin: 0; font-size: 13.5px; line-height: 1.5; color: #fff; }
+.chips { display: flex; justify-content: safe center; gap: 6px; overflow-x: auto; scrollbar-width: none; pointer-events: auto; padding-left: var(--gutter-l); padding-right: var(--gutter-r); scroll-padding-inline: 16px; }
 .chips::-webkit-scrollbar { display: none; }
-.chip { flex: none; min-height: 44px; padding: 0 16px; border-radius: 22px; background: var(--glass); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); white-space: nowrap; font-size: 14px; display: inline-flex; align-items: center; gap: 7px; color: rgba(255, 255, 255, .88); transition: background .15s, color .15s; }
-.chip[aria-current="true"], .chip.tour[aria-pressed="true"] { background: var(--accent); color: var(--on-accent); }
-.chip.tour svg { width: 10px; height: 10px; fill: currentColor; }
+.chip { flex: none; min-height: 44px; padding: 0 16px; border-radius: 22px; background: var(--glass); backdrop-filter: var(--frost); -webkit-backdrop-filter: var(--frost); white-space: nowrap; font-size: 14px; display: inline-flex; align-items: center; gap: 7px; color: rgba(255, 255, 255, .88); transition: background .15s, color .15s; }
+.chip[aria-current="true"] { background: var(--accent); color: var(--on-accent); }
 @media (hover: hover) { .chip:not([aria-current="true"]):not([aria-pressed="true"]):hover { background: rgba(40, 40, 40, .62); color: #fff; } }
-@media (min-width: 760px) { #caption { margin-left: auto; margin-right: auto; } .chips { justify-content: center; } #plan { width: 128px; } .brand h1 { font-size: 17px; } }
+@media (max-width: 420px) { .chip { padding: 0 10px; font-size: 13.5px; } .chips { gap: 4px; } #caption p { font-size: 13px; } }
+@media (min-width: 760px) { #caption { margin-left: auto; margin-right: auto; } #plan { width: 128px; } .brand h1 { font-size: 17px; } }
 /* short landscape phones: keep the scan visible */
 @media (max-height: 460px) { #plan { width: 72px; top: calc(62px + var(--top)); } .rail { padding-top: 8px; padding-bottom: calc(8px + var(--bottom)); } #hint { display: none; } #caption p { font-size: 12.5px; } #caption { padding: 8px 12px 9px; margin-bottom: 6px; } .top { padding-bottom: 8px; } }
 
@@ -125,7 +132,7 @@ dt { color: var(--muted); font-size: 13.5px; }
 dd { margin: 0; font-size: 14px; }
 dd.n { font-family: var(--mono); font-size: 13px; font-variant-numeric: tabular-nums; }
 .gest { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 8px 16px; margin: 0; }
-@media (prefers-reduced-motion: reduce) { #poster, #hint, #caption, #bar i, #plan, .chip { transition: none; } }
+@media (prefers-reduced-motion: reduce) { #poster, #hint, #caption, #caption .body, #bar i, #plan, .chip { transition: none; } }
 </style>
 
 <div id="stage" aria-label="3D scan of Rijksakademie A55. Look around with touch gestures or the mouse."></div>
@@ -137,6 +144,7 @@ dd.n { font-family: var(--mono); font-size: 13px; font-variant-numeric: tabular-
   </div>
   <div class="tools">
     <button class="icon" id="btnFull" aria-label="Full screen" hidden><svg viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
+    <button class="icon" id="btnTour" aria-label="Start auto tour" aria-pressed="false"><svg viewBox="0 0 24 24"><path class="fillshape" d="M9 7.2v9.6l7.6-4.8z"/></svg></button>
     <button class="icon" id="btnInfo" aria-label="Quality and info"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 7.6v.2"/></svg></button>
   </div>
 </header>
@@ -153,7 +161,7 @@ dd.n { font-family: var(--mono); font-size: 13px; font-variant-numeric: tabular-
 
 <div class="rail">
   <span id="hint" class="gone"></span>
-  <section id="caption" class="gone" aria-live="polite"><h2 id="capTitle"></h2><p id="capText"></p></section>
+  <section id="caption" class="gone" aria-live="polite"><div class="body"><h2 id="capTitle"></h2><p id="capText"></p></div></section>
   <nav class="chips" id="chips" aria-label="Views"></nav>
 </div>
 
@@ -223,11 +231,8 @@ let ceilAlpha = 1;      // shown opacity of the ceiling scene
 
 /* ---------- controls ---------- */
 const chips = $('#chips');
-const tourBtn = document.createElement('button');
-tourBtn.className = 'chip tour'; tourBtn.type = 'button'; tourBtn.setAttribute('aria-pressed', 'false');
-tourBtn.innerHTML = '<svg viewBox="0 0 12 12"><path d="M2 1l9 5-9 5z"/></svg><span>Auto tour</span>';
+const tourBtn = $('#btnTour');
 tourBtn.onclick = () => setTour(!tourOn);
-chips.append(tourBtn);
 for (const v of VIEWS) {
   const b = document.createElement('button');
   b.className = 'chip'; b.type = 'button'; b.textContent = v.name; b.dataset.view = v.id;
@@ -238,11 +243,16 @@ function markView(id) {
   currentView = id;
   chips.querySelectorAll('[data-view]').forEach(b => { const on = b.dataset.view === id; b.setAttribute('aria-current', on ? 'true' : 'false'); if (on) b.scrollIntoView({ inline: 'center', block: 'nearest', behavior: reduced ? 'auto' : 'smooth' }); });
 }
+let capTimer = 0;
 function showCaption(v) {
-  $('#capTitle').textContent = v.name; $('#capText').textContent = v.text;
-  $('#caption').classList.remove('gone');
+  const box = $('#caption'), body = box.querySelector('.body'), fill = () => { $('#capTitle').textContent = v.name; $('#capText').textContent = v.text; };
+  clearTimeout(capTimer);
+  if (box.classList.contains('gone') || reduced) { fill(); body.classList.remove('swap'); box.classList.remove('gone'); return; }
+  // already showing another view: fade the old words out, then the new ones in
+  body.classList.add('swap');
+  capTimer = setTimeout(() => { fill(); body.classList.remove('swap'); }, 280);
 }
-function hideCaption() { $('#caption').classList.add('gone'); }
+function hideCaption() { clearTimeout(capTimer); $('#caption').classList.add('gone'); }
 function setHash(id) { try { history.replaceState(null, '', '#' + id); } catch (e) { location.hash = id; } }
 
 const lv = $('#levels');
@@ -254,8 +264,8 @@ for (const [id, l] of Object.entries(LEVELS)) {
   lv.append(b);
 }
 $('#gestures').innerHTML = (hasTouch
-  ? [['Drag with one finger', 'Look around'], ['Pinch', 'Move closer or back'], ['Drag with two fingers', 'Pan'], ['Drag the mini map', 'Walk to another spot'], ['Auto tour', 'Circles the room; tap the screen to stop']]
-  : [['Left-drag', 'Look around'], ['Scroll', 'Move closer or back'], ['Right-drag', 'Pan'], ['Drag the mini map', 'Walk to another spot'], ['Auto tour', 'Circles the room; click to stop']])
+  ? [['Drag with one finger', 'Look around'], ['Pinch', 'Move closer or back'], ['Drag with two fingers', 'Pan'], ['Drag the mini map', 'Walk to another spot'], ['Play button', 'Auto tour around the room; tap the screen to stop']]
+  : [['Left-drag', 'Look around'], ['Scroll', 'Move closer or back'], ['Right-drag', 'Pan'], ['Drag the mini map', 'Walk to another spot'], ['Play button', 'Auto tour around the room; click to stop']])
   .map(([a, b]) => `<dt>${a}</dt><dd>${b}</dd>`).join('');
 
 let lastFocus = null;
@@ -326,8 +336,8 @@ function goTo(id, instant) {
 function setTour(on) {
   tourOn = on;
   tourBtn.setAttribute('aria-pressed', on ? 'true' : 'false');
-  tourBtn.querySelector('span').textContent = on ? 'Stop tour' : 'Auto tour';
-  tourBtn.querySelector('svg').innerHTML = on ? '<path d="M2 2h8v8H2z"/>' : '<path d="M2 1l9 5-9 5z"/>';
+  tourBtn.setAttribute('aria-label', on ? 'Stop auto tour' : 'Start auto tour');
+  tourBtn.querySelector('svg').innerHTML = on ? '<path class="fillshape" d="M8 8h8v8H8z"/>' : '<path class="fillshape" d="M9 7.2v9.6l7.6-4.8z"/>';
   orbit = null;
   if (on && viewer) {
     hideHint(); hideCaption(); flight++; flying = false; planGoal = null; markView(null);
