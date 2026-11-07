@@ -128,7 +128,6 @@ dd.n { font-family: var(--mono); font-size: 13px; font-variant-numeric: tabular-
 <header class="top">
   <div class="brand">
     <h1>Rijksakademie A55</h1>
-    <p>A real studio, scanned in one walk</p>
   </div>
   <div class="tools">
     <button class="icon" id="btnFull" aria-label="Full screen" hidden><svg viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
@@ -173,17 +172,6 @@ dd.n { font-family: var(--mono); font-size: 13px; font-variant-numeric: tabular-
 
   <h3>Controls</h3>
   <dl class="gest" id="gestures"></dl>
-
-  <h3>Scan details</h3>
-  <dl>
-    <dt>Scanner</dt><dd>XGRIDS PortalCam</dd>
-    <dt>Reconstruction</dt><dd>LCC Studio</dd>
-    <dt>Scanned</dt><dd class="n">2026-10-02</dd>
-    <dt>Capture</dt><dd>About 2 min 50 s, a 56 m walk</dd>
-    <dt>Room size</dt><dd class="n">4.8 × 7.4 × 3.8 m</dd>
-    <dt>Loaded now</dt><dd class="n" id="curCount">–</dd>
-  </dl>
-  <p style="color:var(--muted);font-size:13.5px">The distant street outside the windows and nearly invisible blobs were trimmed to keep the files small. Corners the scanner never saw may look patchy or blurred.</p>
 </aside>
 
 <script src="js/three.min.js"></script>
@@ -437,7 +425,6 @@ async function load(id) {
   const keep = viewer ? { p: viewer.camera.position.toArray(), t: viewer.controls.target.toArray() } : null;
   setTour(false); flight++; level = id; slowWarned = false; lowSpells = 0;
   lv.querySelectorAll('.level').forEach(b => b.setAttribute('aria-checked', b.dataset.level === id ? 'true' : 'false'));
-  $('#curCount').textContent = `${l.count.toLocaleString('en-US')} splats (${l.name})`;
   $('#poster').classList.remove('gone');
   showLoad('Loading the scan', `${l.name} quality, ${fmtCount(l.count)} splats`, 0, `0 / ${(l.bytes / 1e6).toFixed(1)} MB`);
   session.set('lcc_loading', id);
