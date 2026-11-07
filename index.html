@@ -121,12 +121,6 @@ button:focus-visible { outline: 1.5px solid var(--fg); outline-offset: 2px; }
 #sheet h2 { margin: 0; font-size: 17px; font-weight: 500; }
 #sheet h3 { margin: 26px 0 10px; font-size: 11px; font-weight: 500; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
 #sheet p { margin: 8px 0 0; max-width: 62ch; color: rgba(255, 255, 255, .82); font-size: 14.5px; }
-.levels { display: grid; gap: 6px; }
-.level { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 52px; padding: 8px 14px; border-radius: 10px; border: 1px solid var(--line); text-align: left; transition: border-color .15s; }
-.level[aria-checked="true"] { border-color: var(--fg); }
-.level b { font-weight: 500; display: block; }
-.level small { display: block; font-size: 12.5px; color: var(--muted); }
-.level .num { flex: none; font-family: var(--mono); font-size: 12px; color: var(--muted); text-align: right; font-variant-numeric: tabular-nums; }
 dl { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 8px 16px; margin: 0; }
 dt { color: var(--muted); font-size: 13.5px; }
 dd { margin: 0; font-size: 14px; }
@@ -145,7 +139,7 @@ dd.n { font-family: var(--mono); font-size: 13px; font-variant-numeric: tabular-
   <div class="tools">
     <button class="icon" id="btnFull" aria-label="Full screen" hidden><svg viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
     <button class="icon" id="btnTour" aria-label="Start auto tour" aria-pressed="false"><svg viewBox="0 0 24 24"><path class="fillshape" d="M9 7.2v9.6l7.6-4.8z"/></svg></button>
-    <button class="icon" id="btnInfo" aria-label="Quality and info"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 7.6v.2"/></svg></button>
+    <button class="icon" id="btnInfo" aria-label="About this scan"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 7.6v.2"/></svg></button>
   </div>
 </header>
 
@@ -182,8 +176,6 @@ dd.n { font-family: var(--mono); font-size: 13px; font-variant-numeric: tabular-
   </div>
   <p>This 3D scene was rebuilt from a single walk through the studio with a handheld PortalCam scanner. It is made of up to a million translucent colour blobs (3D Gaussians), so reflections, cables and fabric look close to a photo, and you can view them from any angle.</p>
 
-  <h3>Quality</h3>
-  <div class="levels" id="levels" role="radiogroup" aria-label="Quality"></div>
 
   <h3>Controls</h3>
   <dl class="gest" id="gestures"></dl>
@@ -193,9 +185,7 @@ dd.n { font-family: var(--mono); font-size: 13px; font-variant-numeric: tabular-
 <script src="js/gaussian-splats-3d.umd.js"></script>
 <script>
 const LEVELS = {
-  lite:     { name: 'Smooth',  note: 'Phones and mobile data', chunks: ['splat/lite/part00.wasm'], count: 214823, bytes: 6874336 },
-  standard: { name: 'Standard', note: 'Newer phones and tablets',   chunks: ['splat/standard/part00.wasm'], count: 429647, bytes: 13748704 },
-  full:     { name: 'High',    note: 'Computers, full detail',   chunks: ['splat/full/part00.wasm', 'splat/full/part01.wasm'], count: 859294, bytes: 27497408 },
+  full: { chunks: ['splat/full/part00.wasm', 'splat/full/part01.wasm'], count: 859294, bytes: 27497408 },
 };
 // room frame: Z up, metres, the floor at z -1.43
 const VIEWS = [
@@ -230,7 +220,7 @@ const fmtMB = b => `${(b / 1e6).toFixed(0)} MB`;
 const fmtCount = n => n >= 1e6 ? `${(n / 1e6).toFixed(1)}M` : `${Math.round(n / 1e3)}K`;
 const realDPR = window.devicePixelRatio || 1;
 
-let viewer = null, level = null, tourOn = false, orbit = null, planGoal = null, planDrag = false, flight = 0, flying = false, currentView = null, slowWarned = false, loadToken = 0;
+let viewer = null, level = null, tourOn = false, orbit = null, planGoal = null, planDrag = false, flight = 0, flying = false, currentView = null, loadToken = 0;
 let ceilAlpha = 1;      // shown opacity of the ceiling scene
 
 /* ---------- controls ---------- */
@@ -259,14 +249,6 @@ function showCaption(v) {
 function hideCaption() { clearTimeout(capTimer); $('#caption').classList.add('gone'); }
 function setHash(id) { try { history.replaceState(null, '', '#' + id); } catch (e) { location.hash = id; } }
 
-const lv = $('#levels');
-for (const [id, l] of Object.entries(LEVELS)) {
-  const b = document.createElement('button');
-  b.className = 'level'; b.type = 'button'; b.setAttribute('role', 'radio'); b.dataset.level = id;
-  b.innerHTML = `<span><b>${l.name}</b><small>${l.note}</small></span><span class="num">${fmtCount(l.count)} splats<br>${fmtMB(l.bytes)}</span>`;
-  b.onclick = () => { closeSheet(); if (id !== level) { store.set('lcc_level', id); load(id); } };
-  lv.append(b);
-}
 $('#gestures').innerHTML = (hasTouch
   ? [['Drag with one finger', 'Look around'], ['Pinch', 'Move closer or back'], ['Drag with two fingers', 'Pan'], ['Drag the mini map', 'Walk to another spot'], ['Play button', 'Auto tour around the room; tap the screen to stop']]
   : [['Left-drag', 'Look around'], ['Scroll', 'Move closer or back'], ['Right-drag', 'Pan'], ['Drag the mini map', 'Walk to another spot'], ['Play button', 'Auto tour around the room; click to stop']])
@@ -388,7 +370,7 @@ plan.addEventListener('keydown', e => {
 
 /* ---------- per-frame: keep the camera in the room, update the plan, watch the frame rate ---------- */
 const me = $('#me'), halo = $('#halo'), cone = $('#cone');
-let frames = 0, fpsT0 = 0, lowSpells = 0, prevTick = 0;
+let prevTick = 0;
 function tick(now) {
   requestAnimationFrame(tick);
   if (!viewer || !viewer.camera || !viewer.controls) return;
@@ -437,18 +419,6 @@ function tick(now) {
   const mx = clamp(p.x, [-3.0, 2.05]), my = clamp(p.y, [-2.85, 4.85]);
   for (const c of [me, halo]) { c.setAttribute('cx', mx.toFixed(3)); c.setAttribute('cy', (-my).toFixed(3)); }
   cone.setAttribute('d', `M${mx} ${-my}L${mx + r * Math.cos(a - half)} ${-(my + r * Math.sin(a - half))}L${mx + r * Math.cos(a + half)} ${-(my + r * Math.sin(a + half))}Z`);
-  // frame rate: only ever a suggestion, never a silent switch
-  if (document.hidden) { fpsT0 = 0; return; }
-  if (!fpsT0) { fpsT0 = now; frames = 0; return; }
-  frames++;
-  if (now - fpsT0 > 4000) {
-    const fps = frames * 1000 / (now - fpsT0); fpsT0 = now; frames = 0;
-    lowSpells = fps < 20 ? lowSpells + 1 : 0;
-    if (lowSpells >= 2 && !slowWarned && level !== 'lite') {
-      slowWarned = true;
-      toast('This device is struggling. Smooth quality will run much better.', [['Use Smooth', () => { $('#toast').hidden = true; store.set('lcc_level', 'lite'); load('lite'); }], ['Not now', () => { $('#toast').hidden = true; }, true]]);
-    }
-  }
 }
 requestAnimationFrame(tick);
 
@@ -465,7 +435,7 @@ async function fetchAll(l, token) {
       if (done) break;
       if (token !== loadToken) { reader.cancel().catch(() => {}); return null; }
       parts.push(value); got += value.byteLength;
-      showLoad('Loading the scan', `${l.name} quality, ${fmtCount(l.count)} splats`, got / l.bytes, `${(got / 1e6).toFixed(1)} / ${(l.bytes / 1e6).toFixed(1)} MB`);
+      showLoad('Loading the scan', `${fmtCount(l.count)} splats`, got / l.bytes, `${(got / 1e6).toFixed(1)} / ${(l.bytes / 1e6).toFixed(1)} MB`);
     }
   }
   // one contiguous buffer, then split it: scene 0 = the room, scene 1 = what the overview hides
@@ -483,11 +453,9 @@ async function fetchAll(l, token) {
 async function load(id) {
   const token = ++loadToken, l = LEVELS[id];
   const keep = viewer ? { p: viewer.camera.position.toArray(), t: viewer.controls.target.toArray() } : null;
-  setTour(false); flight++; level = id; slowWarned = false; lowSpells = 0;
-  lv.querySelectorAll('.level').forEach(b => b.setAttribute('aria-checked', b.dataset.level === id ? 'true' : 'false'));
+  setTour(false); flight++; level = id;
   $('#poster').classList.remove('gone');
-  showLoad('Loading the scan', `${l.name} quality, ${fmtCount(l.count)} splats`, 0, `0 / ${(l.bytes / 1e6).toFixed(1)} MB`);
-  session.set('lcc_loading', id);
+  showLoad('Loading the scan', `${fmtCount(l.count)} splats`, 0, `0 / ${(l.bytes / 1e6).toFixed(1)} MB`);
   try {
     if (viewer) { const old = viewer; viewer = null; try { await old.dispose(); } catch (e) {} }
     const blobs = await fetchAll(l, token);
@@ -519,18 +487,16 @@ async function load(id) {
     v.controls.minDistance = 0.25; v.controls.maxDistance = 12; v.controls.enableDamping = true; v.controls.dampingFactor = 0.09; v.controls.rotateSpeed = isPhone ? 0.55 : 0.5;
     fitFov();
     const canvas = stage.querySelector('canvas');
-    if (canvas) canvas.addEventListener('webglcontextlost', () => showError('The view stopped', 'This device ran out of graphics memory. Reloading in Smooth quality usually fixes it.', [['Reload in Smooth quality', () => { store.set('lcc_level', 'lite'); location.reload(); }]]));
-    session.del('lcc_loading');
+    if (canvas) canvas.addEventListener('webglcontextlost', () => showError('The view stopped', 'This device ran out of graphics memory. Close other tabs and reload the page.', [['Reload', () => location.reload()]]));
     if (start) { markView(start.id); showCaption(start); }
     ceilAlpha = currentView === 'overview' ? 0 : 1;
     $('#load').hidden = true; $('#poster').classList.add('gone');
     showHint();
   } catch (e) {
     console.error(e);
-    session.del('lcc_loading');
     if (token !== loadToken) return;
-    showError('Could not load the scan', navigator.onLine === false ? 'You are offline. Try again once you are connected.' : 'The scan files did not load. Try again, or switch to the smaller Smooth quality.',
-      [['Try again', () => load(id)]].concat(id === 'lite' ? [] : [['Use Smooth quality', () => { store.set('lcc_level', 'lite'); load('lite'); }, true]]));
+    showError('Could not load the scan', navigator.onLine === false ? 'You are offline. Try again once you are connected.' : 'The scan files did not load. Try again in a moment.',
+      [['Try again', () => load(id)]]);
   }
 }
 
@@ -539,11 +505,7 @@ const gl = document.createElement('canvas').getContext('webgl2');
 if (!gl) {
   showError('This browser cannot show the 3D scan', 'It needs WebGL 2. Update Safari or Chrome, or open the page on another device.');
 } else {
-  const crashed = session.get('lcc_loading');    // the page reloaded in the middle of a load: most likely out of memory
-  const saved = store.get('lcc_level');
-  let start = LEVELS[saved] ? saved : (isPhone ? 'lite' : 'full');
-  if (crashed && crashed !== 'lite') { start = 'lite'; store.set('lcc_level', 'lite'); setTimeout(() => toast('The last load ran out of memory, so Smooth quality is on.'), 1000); }
-  load(start);
+  load('full');
 }
 </script>
 
