@@ -1,0 +1,501 @@
+<!doctype html>
+<html lang="zh-Hant">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="theme-color" content="#12161c">
+<meta name="description" content="用手機或電腦瀏覽 Rijks 工作室的 3D Gaussian Splatting 掃描。">
+<meta property="og:title" content="Rijks 工作室掃描">
+<meta property="og:description" content="用手機或電腦瀏覽 Rijks 工作室的 3D Gaussian Splatting 掃描。">
+<meta property="og:image" content="poster.jpg">
+<title>Rijks 工作室掃描</title>
+<style>html,body{margin:0;height:100%}[hidden]{display:none!important}</style>
+</head>
+<body>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&family=DM+Mono:wght@400;500&display=swap">
+<style>
+/* Layout: the scan fills the whole screen; every control floats over it and sits within thumb reach at the bottom.
+   One deliberate dark look: a dim surround keeps attention on the room. Neutrals lean to the blue-grey of the scanned
+   floor paint, the accent is the warm bulb of the floor lamp in the room. */
+:root {
+  color-scheme: dark;
+  --bg: #12161c;
+  --glass: rgba(20, 25, 32, .78);
+  --glass-solid: #1b2129;
+  --line: rgba(205, 220, 235, .16);
+  --fg: #eef2f6;
+  --muted: #a4b0bd;
+  --accent: #ffb25e;
+  --on-accent: #241505;
+  --danger: #ff9d8a;
+  --sans: "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", system-ui, sans-serif;
+  --mono: "DM Mono", ui-monospace, "SF Mono", Consolas, monospace;
+  --gutter-l: max(16px, env(safe-area-inset-left, 0px));
+  --gutter-r: max(16px, env(safe-area-inset-right, 0px));
+  --top: env(safe-area-inset-top, 0px);
+  --bottom: env(safe-area-inset-bottom, 0px);
+}
+html, body { height: 100%; overflow: hidden; overscroll-behavior: none; }
+body { background: var(--bg); color: var(--fg); font: 400 15px/1.55 var(--sans); -webkit-tap-highlight-color: transparent; }
+button { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; touch-action: manipulation; }
+button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+
+#stage { position: fixed; inset: 0; touch-action: none; background: var(--bg); }
+#stage canvas { display: block; touch-action: none; }
+#poster { position: fixed; inset: 0; width: 100%; height: 100%; max-width: none; object-fit: cover; filter: saturate(.85) brightness(.55); transition: opacity .7s; pointer-events: none; }
+#poster.gone { opacity: 0; }
+
+.top { position: fixed; top: 0; left: 0; right: 0; display: flex; align-items: flex-start; justify-content: space-between; gap: 12px;
+  padding: calc(12px + var(--top)) var(--gutter-r) 28px var(--gutter-l);
+  background: linear-gradient(rgba(10, 13, 18, .62), transparent); pointer-events: none; }
+.brand { min-width: 0; text-shadow: 0 1px 8px rgba(0, 0, 0, .6); }
+.brand h1 { margin: 0; font-size: 17px; font-weight: 700; line-height: 1.3; }
+.brand p { margin: 0; font-size: 12.5px; color: #d7dfe7; }
+.tools { display: flex; gap: 8px; flex: none; pointer-events: auto; }
+.icon { width: 44px; height: 44px; display: grid; place-items: center; border-radius: 50%; background: var(--glass); border: 1px solid var(--line); backdrop-filter: blur(10px); }
+.icon svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+
+/* floor plan, drawn to scale from the measured room */
+#plan { position: fixed; right: var(--gutter-r); top: calc(68px + var(--top)); width: 96px; height: auto; padding: 6px; border-radius: 10px;
+  background: var(--glass); border: 1px solid var(--line); backdrop-filter: blur(10px); touch-action: none; cursor: grab; user-select: none; -webkit-user-select: none; }
+#plan:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+#plan.dragging { cursor: grabbing; border-color: var(--accent); }
+#plan .room { fill: rgba(205, 220, 235, .07); stroke: var(--muted); stroke-width: .07; }
+#plan .win { stroke: #9fd0ff; stroke-width: .16; stroke-linecap: butt; }
+#plan .door { stroke: var(--fg); stroke-width: .14; }
+#plan .cone { fill: var(--accent); opacity: .3; }
+#plan .me { fill: var(--accent); stroke: var(--on-accent); stroke-width: .05; }
+#plan .halo { fill: var(--accent); opacity: 0; transition: opacity .15s; }
+#plan.dragging .halo { opacity: .28; }
+
+.rail { position: fixed; left: 0; right: 0; bottom: 0; padding-top: 34px; padding-bottom: calc(12px + var(--bottom));
+  background: linear-gradient(transparent, rgba(10, 13, 18, .72)); pointer-events: none; }
+#hint { display: block; width: fit-content; max-width: calc(100% - 32px); margin: 0 auto 10px; padding: 6px 12px; border-radius: 99px; background: var(--glass); font-size: 13px; color: var(--fg); text-align: center; transition: opacity .4s; }
+#hint.gone { opacity: 0; }
+.chips { display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; pointer-events: auto; padding-left: var(--gutter-l); padding-right: var(--gutter-r); scroll-padding-inline: 16px; }
+.chips::-webkit-scrollbar { display: none; }
+.chip { flex: none; min-height: 44px; padding: 0 16px; border-radius: 22px; background: var(--glass); border: 1px solid var(--line); backdrop-filter: blur(10px); white-space: nowrap; font-weight: 500; display: inline-flex; align-items: center; gap: 7px; }
+.chip[aria-current="true"] { background: var(--accent); color: var(--on-accent); border-color: transparent; }
+.chip.tour { color: var(--accent); }
+.chip.tour svg { width: 13px; height: 13px; fill: currentColor; }
+.chip.tour[aria-pressed="true"] { background: var(--accent); color: var(--on-accent); border-color: transparent; }
+@media (min-width: 760px) { .chips { justify-content: center; } #plan { width: 128px; } .brand h1 { font-size: 19px; } }
+/* short landscape phones: keep the scan visible */
+@media (max-height: 460px) { #plan { width: 72px; top: calc(62px + var(--top)); } .rail { padding-top: 8px; padding-bottom: calc(8px + var(--bottom)); } #hint { display: none; } .top { padding-bottom: 8px; } }
+
+/* loading + errors */
+#load { position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%); width: min(320px, calc(100% - 48px)); padding: 18px 20px; border-radius: 14px; background: var(--glass); border: 1px solid var(--line); backdrop-filter: blur(14px); }
+#load h2 { margin: 0 0 2px; font-size: 16px; font-weight: 700; }
+#load p { margin: 0; font-size: 13.5px; color: var(--muted); }
+#bar { height: 5px; margin: 12px 0 8px; border-radius: 3px; background: rgba(205, 220, 235, .16); overflow: hidden; }
+#bar i { display: block; height: 100%; width: 0; background: var(--accent); transition: width .2s; }
+#loadNum { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+.btnrow { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
+.btn { min-height: 44px; padding: 0 16px; border-radius: 10px; background: var(--accent); color: var(--on-accent); font-weight: 700; }
+.btn.alt { background: transparent; border: 1px solid var(--line); color: var(--fg); font-weight: 500; }
+
+#toast { position: fixed; left: 50%; bottom: calc(84px + var(--bottom)); transform: translateX(-50%); width: min(380px, calc(100% - 32px)); padding: 12px 14px; border-radius: 12px; background: var(--glass-solid); border: 1px solid var(--line); font-size: 14px; }
+#toast .btnrow { margin-top: 8px; }
+
+/* details: bottom sheet on phones, side panel on wide screens */
+#scrim { position: fixed; inset: 0; background: rgba(6, 8, 11, .45); }
+#sheet { position: fixed; left: 0; right: 0; bottom: 0; max-height: 86%; overflow-y: auto; overscroll-behavior: contain; background: var(--glass-solid); border-radius: 18px 18px 0 0; border-top: 1px solid var(--line);
+  padding-top: 8px; padding-bottom: calc(20px + var(--bottom)); padding-left: var(--gutter-l); padding-right: var(--gutter-r); }
+@media (min-width: 760px) { #sheet { left: auto; top: 0; width: 380px; max-height: none; border-radius: 0; border-top: 0; border-left: 1px solid var(--line); padding-top: calc(16px + var(--top)); } }
+.sheethead { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
+#sheet h2 { margin: 0; font-size: 18px; font-weight: 700; }
+#sheet h3 { margin: 22px 0 8px; font-size: 13px; font-weight: 500; letter-spacing: .06em; color: var(--muted); }
+#sheet p { margin: 8px 0 0; max-width: 62ch; }
+.levels { display: grid; gap: 8px; }
+.level { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 52px; padding: 8px 14px; border-radius: 12px; border: 1px solid var(--line); text-align: left; }
+.level[aria-checked="true"] { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+.level b { font-weight: 500; display: block; }
+.level small { display: block; font-size: 12.5px; color: var(--muted); }
+.level .num { flex: none; font-family: var(--mono); font-size: 13px; color: var(--muted); text-align: right; font-variant-numeric: tabular-nums; }
+dl { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 7px 16px; margin: 0; }
+dt { color: var(--muted); font-size: 13.5px; }
+dd { margin: 0; font-size: 14px; }
+dd.n { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+.gest { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 6px 16px; margin: 0; }
+@media (prefers-reduced-motion: reduce) { #poster, #hint, #bar i { transition: none; } }
+</style>
+
+<div id="stage" aria-label="Rijks 工作室的 3D 掃描，可用手勢或滑鼠環顧"></div>
+<img id="poster" src="poster.jpg" alt="">
+
+<header class="top">
+  <div class="brand">
+    <h1>Rijks 工作室掃描</h1>
+    <p>走一圈掃下來的真實房間，可以自由環顧</p>
+  </div>
+  <div class="tools">
+    <button class="icon" id="btnFull" aria-label="全螢幕" hidden><svg viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
+    <button class="icon" id="btnInfo" aria-label="畫質與說明"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 7.6v.2"/></svg></button>
+  </div>
+</header>
+
+<svg id="plan" viewBox="-3.1 -4.95 5.25 7.9" tabindex="0" role="application" aria-label="房間平面圖。拖曳可以移動你在房間裡的位置，也可以用方向鍵移動。">
+  <!-- SVG y = -room y, so the plan keeps the room's north up; 1 unit = 1 m -->
+  <rect class="room" x="-2.866" y="-4.692" width="4.769" height="7.398"/>
+  <g class="win"><path d="M-2.866 1.49V2.49"/><path d="M-2.866 0V1.01"/><path d="M-2.866 -2.07V-.99"/><path d="M-2.866 -3.51V-2.46"/></g>
+  <path class="door" d="M1.903 .555V1.695"/>
+  <path class="cone" id="cone"/>
+  <circle class="halo" id="halo" r=".62"/>
+  <circle class="me" id="me" r=".27"/>
+</svg>
+
+<div class="rail">
+  <span id="hint" class="gone"></span>
+  <nav class="chips" id="chips" aria-label="視角"></nav>
+</div>
+
+<div id="load" role="status">
+  <h2 id="loadTitle">正在載入掃描</h2>
+  <p id="loadMsg"></p>
+  <div id="bar"><i></i></div>
+  <p id="loadNum"></p>
+  <div class="btnrow" id="loadBtns" hidden></div>
+</div>
+<div id="toast" role="status" hidden></div>
+
+<div id="scrim" hidden></div>
+<aside id="sheet" role="dialog" aria-modal="true" aria-labelledby="sheetTitle" hidden>
+  <div class="sheethead">
+    <h2 id="sheetTitle">關於這個掃描</h2>
+    <button class="icon" id="btnClose" aria-label="關閉"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+  </div>
+  <p>這是用手持掃描器 PortalCam 走過房間後重建的 3D 場景。畫面由上百萬顆半透明的色塊（3D 高斯）組成，所以反光、線材和織物都很接近照片，而且可以從任何角度看。</p>
+
+  <h3>畫質</h3>
+  <div class="levels" id="levels" role="radiogroup" aria-label="畫質"></div>
+
+  <h3>操作方式</h3>
+  <dl class="gest" id="gestures"></dl>
+
+  <h3>掃描資料</h3>
+  <dl>
+    <dt>掃描器</dt><dd>XGRIDS PortalCam</dd>
+    <dt>重建軟體</dt><dd>LCC Studio</dd>
+    <dt>掃描日期</dt><dd class="n">2026-10-02</dd>
+    <dt>掃描時間</dt><dd>約 2 分 50 秒，走了約 56 公尺</dd>
+    <dt>房間大小</dt><dd class="n">4.8 × 7.4 × 3.8 m</dd>
+    <dt>目前載入</dt><dd class="n" id="curCount">–</dd>
+  </dl>
+  <p style="color:var(--muted);font-size:13.5px">窗外較遠的街景和透明度極低的色塊已裁掉，檔案會小一些。走到沒掃到的角落時，畫面可能出現破洞或模糊。</p>
+</aside>
+
+<script src="js/three.min.js"></script>
+<script src="js/gaussian-splats-3d.umd.js"></script>
+<script>
+const LEVELS = {
+  lite:     { name: '流暢',   note: '適合手機與行動網路', chunks: ['splat/lite/part00.wasm'], count: 289627, bytes: 9268064 },
+  standard: { name: '標準',   note: '較新的手機、平板',   chunks: ['splat/standard/part00.wasm', 'splat/standard/part01.wasm'], count: 574691, bytes: 18390112 },
+  full:     { name: '高畫質', note: '電腦，細節最完整',   chunks: ['splat/full/part00.wasm', 'splat/full/part01.wasm', 'splat/full/part02.wasm'], count: 1112022, bytes: 35584704 },
+};
+// room frame: Z up, metres, the floor at z -1.43
+const VIEWS = [
+  { id: 'overview', name: '全景', pos: [1.55, -1.05, 0.19], look: [-2.6, 1.0, -0.38],
+    portrait: { pos: [1.45, -0.95, 0.55], look: [-1.1, 4.0, -0.95] } },      // a tall screen looks along the room's long side
+  { id: 'desk',     name: '書桌', pos: [0.55, 2.05, 0.07], look: [-0.65, 4.25, -0.61] },
+  { id: 'sofa',     name: '沙發', pos: [0.95, -0.35, -0.18], look: [-0.35, -2.35, -0.98] },
+  { id: 'shelf',    name: '層架', pos: [-0.55, -0.75, 0.02], look: [-2.15, -2.55, -0.58] },
+  { id: 'windows',  name: '窗邊', pos: [-0.55, 0.05, -0.18], look: [-2.85, 1.2, -0.38] },
+];
+const ROOM = { x: [-2.72, 1.76], y: [-2.56, 4.55], z: [-1.33, 2.2] };     // cameras stay inside the walls
+// auto tour: a slow lap on an ellipse just inside the walls, always facing the middle of the room
+const LAP = { cx: -0.48, cy: 1.0, rx: 1.75, ry: 3.05, z: 0.2, lookZ: -0.4, ms: matchMedia('(prefers-reduced-motion: reduce)').matches ? 120000 : 60000 };
+const $ = s => document.querySelector(s);
+const store = { get(k) { try { return localStorage.getItem(k); } catch (e) { return null; } }, set(k, v) { try { localStorage.setItem(k, v); } catch (e) {} } };
+const session = { get(k) { try { return sessionStorage.getItem(k); } catch (e) { return null; } }, set(k, v) { try { sessionStorage.setItem(k, v); } catch (e) {} }, del(k) { try { sessionStorage.removeItem(k); } catch (e) {} } };
+const isPhone = matchMedia('(pointer: coarse)').matches && Math.min(innerWidth, innerHeight) < 820;
+const hasTouch = matchMedia('(pointer: coarse)').matches;
+const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+const shotOf = v => (innerHeight > innerWidth && v.portrait) || v;
+const fmtMB = b => `${(b / 1e6).toFixed(0)} MB`;
+const fmtCount = n => `${Math.round(n / 1e4)} 萬`;
+const realDPR = window.devicePixelRatio || 1;
+
+let viewer = null, level = null, tourOn = false, orbit = null, planGoal = null, planDrag = false, flight = 0, currentView = null, slowWarned = false, loadToken = 0;
+
+/* ---------- controls ---------- */
+const chips = $('#chips');
+const tourBtn = document.createElement('button');
+tourBtn.className = 'chip tour'; tourBtn.type = 'button'; tourBtn.setAttribute('aria-pressed', 'false');
+tourBtn.innerHTML = '<svg viewBox="0 0 12 12"><path d="M2 1l9 5-9 5z"/></svg><span>自動導覽</span>';
+tourBtn.onclick = () => setTour(!tourOn);
+chips.append(tourBtn);
+for (const v of VIEWS) {
+  const b = document.createElement('button');
+  b.className = 'chip'; b.type = 'button'; b.textContent = v.name; b.dataset.view = v.id;
+  b.onclick = () => { setTour(false); goTo(v.id); };
+  chips.append(b);
+}
+function markView(id) {
+  currentView = id;
+  chips.querySelectorAll('[data-view]').forEach(b => { const on = b.dataset.view === id; b.setAttribute('aria-current', on ? 'true' : 'false'); if (on) b.scrollIntoView({ inline: 'center', block: 'nearest', behavior: reduced ? 'auto' : 'smooth' }); });
+}
+function setHash(id) { try { history.replaceState(null, '', '#' + id); } catch (e) { location.hash = id; } }
+
+const lv = $('#levels');
+for (const [id, l] of Object.entries(LEVELS)) {
+  const b = document.createElement('button');
+  b.className = 'level'; b.type = 'button'; b.setAttribute('role', 'radio'); b.dataset.level = id;
+  b.innerHTML = `<span><b>${l.name}</b><small>${l.note}</small></span><span class="num">${fmtCount(l.count)}顆<br>${fmtMB(l.bytes)}</span>`;
+  b.onclick = () => { closeSheet(); if (id !== level) { store.set('lcc_level', id); load(id); } };
+  lv.append(b);
+}
+$('#gestures').innerHTML = (hasTouch
+  ? [['單指拖曳', '環顧四周'], ['雙指開合', '靠近或退後'], ['雙指拖曳', '平移'], ['拖曳小地圖', '走到房間另一處'], ['自動導覽', '繞著房間中心走一圈，碰一下畫面就停']]
+  : [['左鍵拖曳', '環顧四周'], ['滾輪', '靠近或退後'], ['右鍵拖曳', '平移'], ['拖曳小地圖', '走到房間另一處'], ['自動導覽', '繞著房間中心走一圈，點一下畫面就停']])
+  .map(([a, b]) => `<dt>${a}</dt><dd>${b}</dd>`).join('');
+
+let lastFocus = null;
+function openSheet() { lastFocus = document.activeElement; $('#sheet').hidden = $('#scrim').hidden = false; $('#btnClose').focus(); setTour(false); }
+function closeSheet() { $('#sheet').hidden = $('#scrim').hidden = true; if (lastFocus) lastFocus.focus(); }
+$('#btnInfo').onclick = openSheet; $('#btnClose').onclick = closeSheet; $('#scrim').onclick = closeSheet;
+addEventListener('keydown', e => { if (e.key === 'Escape' && !$('#sheet').hidden) closeSheet(); }, true);
+
+const stage = $('#stage');
+if (document.documentElement.requestFullscreen && !isPhone) {
+  $('#btnFull').hidden = false;
+  $('#btnFull').onclick = () => { (document.fullscreenElement ? document.exitFullscreen() : document.documentElement.requestFullscreen()).catch(() => {}); };
+}
+
+/* ---------- messages ---------- */
+function showLoad(title, msg, frac, num) {
+  $('#load').hidden = false; $('#loadTitle').textContent = title; $('#loadMsg').textContent = msg;
+  $('#bar').hidden = frac == null; if (frac != null) $('#bar i').style.width = `${Math.round(frac * 100)}%`;
+  $('#loadNum').textContent = num || ''; $('#loadBtns').hidden = true; $('#loadBtns').innerHTML = '';
+}
+function actions(box, list) {
+  box.hidden = false; box.innerHTML = '';
+  for (const [text, fn, alt] of list) { const b = document.createElement('button'); b.className = alt ? 'btn alt' : 'btn'; b.type = 'button'; b.textContent = text; b.onclick = fn; box.append(b); }
+}
+function showError(title, msg, list) { showLoad(title, msg); $('#bar').hidden = true; $('#poster').classList.remove('gone'); if (list) actions($('#loadBtns'), list); }
+function toast(msg, list) {
+  const t = $('#toast'); t.hidden = false; t.textContent = msg;
+  if (list) { const r = document.createElement('div'); r.className = 'btnrow'; t.append(r); actions(r, list); }
+  else setTimeout(() => { t.hidden = true; }, 5000);
+}
+let hintTimer = 0;
+function showHint() {
+  if (store.get('lcc_hint_seen2')) return;
+  $('#hint').textContent = hasTouch ? '單指拖曳環顧，雙指縮放；拖曳小地圖可以移動位置' : '拖曳環顧，滾輪縮放；拖曳小地圖可以移動位置';
+  $('#hint').classList.remove('gone');
+  hintTimer = setTimeout(hideHint, 7000);
+}
+function hideHint() { clearTimeout(hintTimer); $('#hint').classList.add('gone'); store.set('lcc_hint_seen2', '1'); }
+
+/* ---------- camera ---------- */
+const clamp = (v, [a, b]) => Math.min(b, Math.max(a, v));
+function fitFov() {
+  if (!viewer || !viewer.camera) return;
+  const portrait = innerHeight > innerWidth;
+  viewer.camera.fov = portrait ? 76 : 58;     // a tall phone screen needs a wider lens to show the same room
+  viewer.camera.updateProjectionMatrix();
+}
+addEventListener('resize', () => setTimeout(fitFov, 60));
+
+function goTo(id, instant) {
+  const v = VIEWS.find(x => x.id === id); if (!v || !viewer) return;
+  planGoal = null;
+  markView(id); setHash(id);
+  const cam = viewer.camera, tgt = viewer.controls.target;
+  const fromP = cam.position.clone(), fromT = tgt.clone(), toP = new THREE.Vector3(...shotOf(v).pos), toT = new THREE.Vector3(...shotOf(v).look);
+  const token = ++flight;
+  const dur = instant || reduced ? 0 : 1500 + 350 * fromP.distanceTo(toP);
+  const t0 = performance.now();
+  (function step(now) {
+    if (token !== flight) return;
+    const k = dur ? Math.min(1, (now - t0) / dur) : 1, e = k * k * (3 - 2 * k);
+    cam.position.lerpVectors(fromP, toP, e); tgt.lerpVectors(fromT, toT, e);
+    if (k < 1) requestAnimationFrame(step);
+  })(t0);
+  return dur;
+}
+function setTour(on) {
+  tourOn = on;
+  tourBtn.setAttribute('aria-pressed', on ? 'true' : 'false');
+  tourBtn.querySelector('span').textContent = on ? '停止導覽' : '自動導覽';
+  tourBtn.querySelector('svg').innerHTML = on ? '<path d="M2 2h8v8H2z"/>' : '<path d="M2 1l9 5-9 5z"/>';
+  orbit = null;
+  if (on && viewer) {
+    hideHint(); flight++; planGoal = null; markView(null);
+    const p = viewer.camera.position, now = performance.now();
+    // join the lap at the point nearest the camera, easing in from wherever the viewer is now
+    orbit = { a: Math.atan2((p.y - LAP.cy) / LAP.ry, (p.x - LAP.cx) / LAP.rx), t0: now, last: now, fromP: p.clone(), fromT: viewer.controls.target.clone() };
+  }
+}
+// any direct touch on the scan hands control back to the viewer
+stage.addEventListener('pointerdown', () => { takeOver(); planGoal = null; }, true);
+stage.addEventListener('wheel', () => { takeOver(); planGoal = null; }, { capture: true, passive: true });
+addEventListener('hashchange', () => { const id = location.hash.slice(1); if (id && id !== currentView) { setTour(false); goTo(id); } });
+
+/* ---------- drag the floor plan to move around the room ---------- */
+const plan = $('#plan');
+function planPoint(e) {
+  const r = plan.getBoundingClientRect(), cs = getComputedStyle(plan), vb = plan.viewBox.baseVal;
+  const l = parseFloat(cs.paddingLeft) + parseFloat(cs.borderLeftWidth), t = parseFloat(cs.paddingTop) + parseFloat(cs.borderTopWidth);
+  const x = vb.x + (e.clientX - r.left - l) / (r.width - 2 * l) * vb.width, y = vb.y + (e.clientY - r.top - t) / (r.height - 2 * t) * vb.height;
+  return { x: clamp(x, ROOM.x), y: clamp(-y, ROOM.y) };       // the plan draws room y upwards
+}
+function wallAhead(p, hx, hy) {        // metres from the camera to the wall it faces
+  const d = [];
+  if (hx) d.push(((hx > 0 ? ROOM.x[1] : ROOM.x[0]) - p.x) / hx);
+  if (hy) d.push(((hy > 0 ? ROOM.y[1] : ROOM.y[0]) - p.y) / hy);
+  return Math.min(...d);
+}
+function takeOver() { flight++; setTour(false); hideHint(); if (currentView) markView(null); }
+plan.addEventListener('pointerdown', e => {
+  if (!viewer) return;
+  e.preventDefault(); takeOver();
+  planDrag = true; plan.classList.add('dragging'); planGoal = planPoint(e);
+  try { plan.setPointerCapture(e.pointerId); } catch (err) {}
+});
+plan.addEventListener('pointermove', e => { if (planDrag) planGoal = planPoint(e); });
+for (const ev of ['pointerup', 'pointercancel']) plan.addEventListener(ev, () => { planDrag = false; plan.classList.remove('dragging'); });
+plan.addEventListener('keydown', e => {
+  const step = { ArrowLeft: [-.3, 0], ArrowRight: [.3, 0], ArrowUp: [0, .3], ArrowDown: [0, -.3] }[e.key];
+  if (!step || !viewer) return;
+  e.preventDefault(); e.stopPropagation(); takeOver();
+  const p = planGoal || viewer.camera.position;
+  planGoal = { x: clamp(p.x + step[0], ROOM.x), y: clamp(p.y + step[1], ROOM.y) };
+});
+
+/* ---------- per-frame: keep the camera in the room, update the plan, watch the frame rate ---------- */
+const me = $('#me'), halo = $('#halo'), cone = $('#cone');
+let frames = 0, fpsT0 = 0, lowSpells = 0, prevTick = 0;
+function tick(now) {
+  requestAnimationFrame(tick);
+  if (!viewer || !viewer.camera || !viewer.controls) return;
+  const p = viewer.camera.position, t = viewer.controls.target;
+  const lastTick = prevTick; prevTick = now;
+  if (orbit) {
+    orbit.a += 2 * Math.PI * Math.min(now - orbit.last, 1000) / LAP.ms; orbit.last = now;
+    const j = Math.min(1, (now - orbit.t0) / 1800), e = j * j * (3 - 2 * j);
+    p.set(LAP.cx + LAP.rx * Math.cos(orbit.a), LAP.cy + LAP.ry * Math.sin(orbit.a), LAP.z).lerp(orbit.fromP, 1 - e);
+    t.set(LAP.cx, LAP.cy, LAP.lookZ).lerp(orbit.fromT, 1 - e);
+  }
+  if (planGoal) {
+    // walk toward the point on the plan; the view direction stays the same, so the target moves with the camera
+    const k = 1 - Math.exp(-Math.min(now - lastTick, 1000) / 70);      // same walking speed at any frame rate
+    const dx = (planGoal.x - p.x) * k, dy = (planGoal.y - p.y) * k;
+    p.x += dx; p.y += dy; t.x += dx; t.y += dy;
+    // walked up to a wall: turn toward the middle of the room instead of staring at it from a few centimetres
+    const L = Math.max(Math.hypot(t.x - p.x, t.y - p.y), 0.8);
+    let hx = (t.x - p.x) / L, hy = (t.y - p.y) / L;
+    const facingWall = wallAhead(p, hx, hy) < 1.5;
+    if (facingWall) {
+      const toC = Math.hypot(LAP.cx - p.x, LAP.cy - p.y) || 1, turn = 1 - Math.exp(-Math.min(now - lastTick, 1000) / 260);
+      hx += ((LAP.cx - p.x) / toC - hx) * turn; hy += ((LAP.cy - p.y) / toC - hy) * turn;
+      const n = Math.hypot(hx, hy) || 1;
+      t.x = p.x + hx / n * L; t.y = p.y + hy / n * L;
+    }
+    if (Math.hypot(planGoal.x - p.x, planGoal.y - p.y) < 0.004 && !planDrag && !facingWall) planGoal = null;
+  }
+  p.x = clamp(p.x, ROOM.x); p.y = clamp(p.y, ROOM.y); p.z = clamp(p.z, ROOM.z);
+  const a = Math.atan2(t.y - p.y, t.x - p.x), half = Math.atan(Math.tan(viewer.camera.fov * Math.PI / 360) * (viewer.camera.aspect || 1)), r = 1.5;
+  for (const c of [me, halo]) { c.setAttribute('cx', p.x.toFixed(3)); c.setAttribute('cy', (-p.y).toFixed(3)); }
+  cone.setAttribute('d', `M${p.x} ${-p.y}L${p.x + r * Math.cos(a - half)} ${-(p.y + r * Math.sin(a - half))}L${p.x + r * Math.cos(a + half)} ${-(p.y + r * Math.sin(a + half))}Z`);
+  // frame rate: only ever a suggestion, never a silent switch
+  if (document.hidden) { fpsT0 = 0; return; }
+  if (!fpsT0) { fpsT0 = now; frames = 0; return; }
+  frames++;
+  if (now - fpsT0 > 4000) {
+    const fps = frames * 1000 / (now - fpsT0); fpsT0 = now; frames = 0;
+    lowSpells = fps < 20 ? lowSpells + 1 : 0;
+    if (lowSpells >= 2 && !slowWarned && level !== 'lite') {
+      slowWarned = true;
+      toast('這台裝置跑起來有點吃力，改用流暢畫質會順很多。', [['改用流暢', () => { $('#toast').hidden = true; store.set('lcc_level', 'lite'); load('lite'); }], ['先不要', () => { $('#toast').hidden = true; }, true]]);
+    }
+  }
+}
+requestAnimationFrame(tick);
+
+/* ---------- loading ---------- */
+async function fetchAll(l, token) {
+  const parts = []; let got = 0;
+  for (const u of l.chunks) {
+    const r = await fetch(u);
+    if (!r.ok) throw new Error(`file ${u}: HTTP ${r.status}`);
+    const reader = r.body && r.body.getReader ? r.body.getReader() : null;
+    if (!reader) { const b = await r.arrayBuffer(); got += b.byteLength; parts.push(b); continue; }
+    for (;;) {
+      const { done, value } = await reader.read();
+      if (done) break;
+      if (token !== loadToken) { reader.cancel().catch(() => {}); return null; }
+      parts.push(value); got += value.byteLength;
+      showLoad('正在載入掃描', `${l.name}畫質，${fmtCount(l.count)}顆色塊`, got / l.bytes, `${(got / 1e6).toFixed(1)} / ${(l.bytes / 1e6).toFixed(1)} MB`);
+    }
+  }
+  return new Blob(parts, { type: 'application/octet-stream' });
+}
+async function load(id) {
+  const token = ++loadToken, l = LEVELS[id];
+  const keep = viewer ? { p: viewer.camera.position.toArray(), t: viewer.controls.target.toArray() } : null;
+  setTour(false); flight++; level = id; slowWarned = false; lowSpells = 0;
+  lv.querySelectorAll('.level').forEach(b => b.setAttribute('aria-checked', b.dataset.level === id ? 'true' : 'false'));
+  $('#curCount').textContent = `${l.count.toLocaleString()} 顆（${l.name}）`;
+  $('#poster').classList.remove('gone');
+  showLoad('正在載入掃描', `${l.name}畫質，${fmtCount(l.count)}顆色塊`, 0, `0 / ${(l.bytes / 1e6).toFixed(1)} MB`);
+  session.set('lcc_loading', id);
+  try {
+    if (viewer) { const old = viewer; viewer = null; try { await old.dispose(); } catch (e) {} }
+    const blob = await fetchAll(l, token);
+    if (!blob || token !== loadToken) return;
+    showLoad('快完成了', '正在準備畫面', 1, '');
+    const url = URL.createObjectURL(blob);
+    const GS = window['Gaussian Splats 3D'];
+    const start = keep ? null : (VIEWS.find(v => v.id === location.hash.slice(1)) || VIEWS[0]);
+    // the library reads the display density once, at construction; phones at 3x would cost nine times the pixels
+    const dpr = Math.min(realDPR, isPhone ? 1.5 : 2);
+    try { Object.defineProperty(window, 'devicePixelRatio', { get: () => dpr, configurable: true }); } catch (e) {}
+    // a fresh container each time: the old viewer's teardown can't touch the new canvas
+    const root = document.createElement('div'); root.style.cssText = 'position:absolute;inset:0';
+    stage.replaceChildren(root);
+    const v = new GS.Viewer({
+      rootElement: root, cameraUp: [0, 0, 1],
+      initialCameraPosition: keep ? keep.p : shotOf(start).pos, initialCameraLookAt: keep ? keep.t : shotOf(start).look,
+      sharedMemoryForWorkers: false, gpuAcceleratedSort: false, sphericalHarmonicsDegree: 0,
+      antialiased: !isPhone, halfPrecisionCovariancesOnGPU: isPhone,
+      sceneRevealMode: GS.SceneRevealMode.Instant, logLevel: 0,
+    });
+    await v.addSplatScene(url, { format: GS.SceneFormat.Splat, showLoadingUI: false, splatAlphaRemovalThreshold: 1, progressiveLoad: false });
+    URL.revokeObjectURL(url);
+    if (token !== loadToken) { try { await v.dispose(); } catch (e) {} return; }
+    v.checkForFocalPointChange = () => {};     // a stray tap must not swing the camera to whatever was under the finger
+    viewer = v; v.start();
+    v.renderer.setClearColor(0xdbe6ef, 1);     // unscanned sky behind the windows: bright like the blown-out photos, not a black hole
+    v.controls.minDistance = 0.25; v.controls.maxDistance = 9; v.controls.enableDamping = true; v.controls.dampingFactor = 0.09; v.controls.rotateSpeed = isPhone ? 0.55 : 0.5;
+    fitFov();
+    const canvas = stage.querySelector('canvas');
+    if (canvas) canvas.addEventListener('webglcontextlost', () => showError('畫面中斷了', '這台裝置的顯示記憶體不夠，重新載入並改用流暢畫質通常就能解決。', [['用流暢畫質重新載入', () => { store.set('lcc_level', 'lite'); location.reload(); }]]));
+    session.del('lcc_loading');
+    if (start) markView(start.id);
+    $('#load').hidden = true; $('#poster').classList.add('gone');
+    showHint();
+  } catch (e) {
+    console.error(e);
+    session.del('lcc_loading');
+    if (token !== loadToken) return;
+    showError('載入失敗', navigator.onLine === false ? '目前沒有網路連線，連上後再試一次。' : '掃描檔沒有順利載入，可以再試一次，或改用檔案較小的流暢畫質。',
+      [['再試一次', () => load(id)]].concat(id === 'lite' ? [] : [['改用流暢畫質', () => { store.set('lcc_level', 'lite'); load('lite'); }, true]]));
+  }
+}
+
+/* ---------- start ---------- */
+const gl = document.createElement('canvas').getContext('webgl2');
+if (!gl) {
+  showError('這個瀏覽器無法顯示 3D 掃描', '需要支援 WebGL 2 的瀏覽器。請更新 Safari 或 Chrome，或換一台裝置開啟。');
+} else {
+  const crashed = session.get('lcc_loading');    // the page reloaded in the middle of a load: most likely out of memory
+  const saved = store.get('lcc_level');
+  let start = LEVELS[saved] ? saved : (isPhone ? 'lite' : 'full');
+  if (crashed && crashed !== 'lite') { start = 'lite'; store.set('lcc_level', 'lite'); setTimeout(() => toast('上次載入時記憶體不足，已改用流暢畫質。'), 1000); }
+  load(start);
+}
+</script>
+
+</body>
+</html>
