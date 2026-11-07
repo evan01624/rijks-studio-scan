@@ -74,15 +74,21 @@ button:focus-visible { outline: 1.5px solid var(--fg); outline-offset: 2px; }
   background: linear-gradient(transparent, rgba(0, 0, 0, .5)); pointer-events: none; }
 #hint { display: block; width: fit-content; max-width: calc(100% - 32px); margin: 0 auto 10px; padding: 5px 12px; border-radius: 99px; background: var(--glass); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); font-size: 12.5px; color: rgba(255, 255, 255, .85); text-align: center; transition: opacity .4s; }
 #hint.gone { opacity: 0; }
+/* caption for the chosen view; fades out as soon as the visitor takes the camera */
+#caption { width: min(400px, calc(100% - var(--gutter-l) - var(--gutter-r))); margin: 0 0 10px var(--gutter-l); padding: 12px 14px 13px; border-radius: 12px;
+  background: var(--glass); backdrop-filter: blur(14px); -webkit-backdrop-filter: blur(14px); transition: opacity .35s, transform .35s; }
+#caption.gone { opacity: 0; transform: translateY(6px); pointer-events: none; }
+#caption h2 { margin: 0 0 3px; font-size: 11px; font-weight: 500; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+#caption p { margin: 0; font-size: 13.5px; line-height: 1.5; color: rgba(255, 255, 255, .9); }
 .chips { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; pointer-events: auto; padding-left: var(--gutter-l); padding-right: var(--gutter-r); scroll-padding-inline: 16px; }
 .chips::-webkit-scrollbar { display: none; }
 .chip { flex: none; min-height: 44px; padding: 0 16px; border-radius: 22px; background: var(--glass); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); white-space: nowrap; font-size: 14px; display: inline-flex; align-items: center; gap: 7px; color: rgba(255, 255, 255, .88); transition: background .15s, color .15s; }
 .chip[aria-current="true"], .chip.tour[aria-pressed="true"] { background: var(--accent); color: var(--on-accent); }
 .chip.tour svg { width: 10px; height: 10px; fill: currentColor; }
 @media (hover: hover) { .chip:not([aria-current="true"]):not([aria-pressed="true"]):hover { background: rgba(40, 40, 40, .62); color: #fff; } }
-@media (min-width: 760px) { .chips { justify-content: center; } #plan { width: 128px; } .brand h1 { font-size: 17px; } }
+@media (min-width: 760px) { #caption { margin-left: auto; margin-right: auto; } .chips { justify-content: center; } #plan { width: 128px; } .brand h1 { font-size: 17px; } }
 /* short landscape phones: keep the scan visible */
-@media (max-height: 460px) { #plan { width: 72px; top: calc(62px + var(--top)); } .rail { padding-top: 8px; padding-bottom: calc(8px + var(--bottom)); } #hint { display: none; } .top { padding-bottom: 8px; } }
+@media (max-height: 460px) { #plan { width: 72px; top: calc(62px + var(--top)); } .rail { padding-top: 8px; padding-bottom: calc(8px + var(--bottom)); } #hint { display: none; } #caption p { font-size: 12.5px; } #caption { padding: 8px 12px 9px; margin-bottom: 6px; } .top { padding-bottom: 8px; } }
 
 /* loading + errors */
 #load { position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%); width: min(300px, calc(100% - 48px)); padding: 18px 20px; border-radius: 12px; background: var(--glass); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); }
@@ -119,7 +125,7 @@ dt { color: var(--muted); font-size: 13.5px; }
 dd { margin: 0; font-size: 14px; }
 dd.n { font-family: var(--mono); font-size: 13px; font-variant-numeric: tabular-nums; }
 .gest { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 8px 16px; margin: 0; }
-@media (prefers-reduced-motion: reduce) { #poster, #hint, #bar i, #plan, .chip { transition: none; } }
+@media (prefers-reduced-motion: reduce) { #poster, #hint, #caption, #bar i, #plan, .chip { transition: none; } }
 </style>
 
 <div id="stage" aria-label="3D scan of Rijksakademie A55. Look around with touch gestures or the mouse."></div>
@@ -147,6 +153,7 @@ dd.n { font-family: var(--mono); font-size: 13px; font-variant-numeric: tabular-
 
 <div class="rail">
   <span id="hint" class="gone"></span>
+  <section id="caption" class="gone" aria-live="polite"><h2 id="capTitle"></h2><p id="capText"></p></section>
   <nav class="chips" id="chips" aria-label="Views"></nav>
 </div>
 
@@ -184,14 +191,20 @@ const LEVELS = {
 };
 // room frame: Z up, metres, the floor at z -1.43
 const VIEWS = [
-  { id: 'overview', name: 'Overview', pos: [1.55, -1.05, 0.19], look: [-2.6, 1.0, -0.38],
-    portrait: { pos: [1.45, -0.95, 0.55], look: [-1.1, 4.0, -0.95] } },      // a tall screen looks along the room's long side
-  { id: 'desk',     name: 'Desk', pos: [0.55, 2.05, 0.07], look: [-0.65, 4.25, -0.61] },
-  { id: 'sofa',     name: 'Sofa', pos: [0.95, -0.35, -0.18], look: [-0.35, -2.35, -0.98] },
-  { id: 'shelf',    name: 'Shelves', pos: [-0.55, -0.75, 0.02], look: [-2.15, -2.55, -0.58] },
-  { id: 'windows',  name: 'Windows', pos: [-0.55, 0.05, -0.18], look: [-2.85, 1.2, -0.38] },
+  // overview: the ceiling fades out and the camera looks down into the room from above, like a dollhouse
+  { id: 'overview', name: 'Overview', pos: [1.7, 1.0, 6.3], look: [-0.35, 1.0, -1.43],
+    portrait: { pos: [-0.48, -1.6, 8.4], look: [-0.48, 0.7, -1.43] },        // a tall screen looks along the room's long side
+    text: 'Studio A55 at the Rijksakademie, about 4.8 × 7.4 m, seen from above with the ceiling lifted away. Four tall windows line one long wall, with a workstation at one end and a sofa corner at the other. Pick an area below for a closer look.' },
+  { id: 'desk',     name: 'Desk', pos: [0.55, 2.05, 0.07], look: [-0.65, 4.25, -0.61], text: 'A white sit-stand desk with three monitors, one turned upright, between a pair of studio speakers. A microphone, a floor lamp and a red high-back chair complete the workstation.' },
+  { id: 'sofa',     name: 'Sofa', pos: [0.95, -0.35, -0.18], look: [-0.35, -2.35, -0.98], text: 'A dark leather two-seater against the end wall, beside a small wooden side table with a kettle and mugs. Cardboard boxes wait on the floor.' },
+  { id: 'shelf',    name: 'Shelves', pos: [-0.55, -0.75, 0.02], look: [-2.15, -2.55, -0.58], text: 'A galvanised steel shelving unit in the corner holds boxes, electronics and packing material, with a wire drawer unit tucked under the window next to it.' },
+  { id: 'windows',  name: 'Windows', pos: [-0.55, 0.05, -0.18], look: [-2.85, 1.2, -0.38], text: 'Four tall arched windows with white roller blinds run along this wall, each with a radiator underneath. They fill the studio with daylight.' },
 ];
 const ROOM = { x: [-2.72, 1.76], y: [-2.56, 4.55], z: [-1.33, 2.2] };     // cameras stay inside the walls
+// above the walls the camera may leave the room's footprint; it may not sink below the wall tops out there
+const OUT = { x: [-7.5, 6.5], y: [-7.5, 9.5], z: [2.6, 9] };
+// splats hidden in the overview: the ceiling, its beams and lights, and the bits of street seen through the windows
+const CEIL_Z = 1.95, SHELL = { x: [-3.22, 2.26], y: [-3.06, 5.05] };
 // auto tour: a slow lap on an ellipse just inside the walls, always facing the middle of the room
 const LAP = { cx: -0.48, cy: 1.0, rx: 1.75, ry: 3.05, z: 0.2, lookZ: -0.4, ms: matchMedia('(prefers-reduced-motion: reduce)').matches ? 120000 : 60000 };
 const $ = s => document.querySelector(s);
@@ -205,7 +218,8 @@ const fmtMB = b => `${(b / 1e6).toFixed(0)} MB`;
 const fmtCount = n => n >= 1e6 ? `${(n / 1e6).toFixed(1)}M` : `${Math.round(n / 1e3)}K`;
 const realDPR = window.devicePixelRatio || 1;
 
-let viewer = null, level = null, tourOn = false, orbit = null, planGoal = null, planDrag = false, flight = 0, currentView = null, slowWarned = false, loadToken = 0;
+let viewer = null, level = null, tourOn = false, orbit = null, planGoal = null, planDrag = false, flight = 0, flying = false, currentView = null, slowWarned = false, loadToken = 0;
+let ceilAlpha = 1;      // shown opacity of the ceiling scene
 
 /* ---------- controls ---------- */
 const chips = $('#chips');
@@ -224,6 +238,11 @@ function markView(id) {
   currentView = id;
   chips.querySelectorAll('[data-view]').forEach(b => { const on = b.dataset.view === id; b.setAttribute('aria-current', on ? 'true' : 'false'); if (on) b.scrollIntoView({ inline: 'center', block: 'nearest', behavior: reduced ? 'auto' : 'smooth' }); });
 }
+function showCaption(v) {
+  $('#capTitle').textContent = v.name; $('#capText').textContent = v.text;
+  $('#caption').classList.remove('gone');
+}
+function hideCaption() { $('#caption').classList.add('gone'); }
 function setHash(id) { try { history.replaceState(null, '', '#' + id); } catch (e) { location.hash = id; } }
 
 const lv = $('#levels');
@@ -289,17 +308,18 @@ addEventListener('resize', () => setTimeout(fitFov, 60));
 function goTo(id, instant) {
   const v = VIEWS.find(x => x.id === id); if (!v || !viewer) return;
   planGoal = null;
-  markView(id); setHash(id);
+  markView(id); setHash(id); showCaption(v);
   const cam = viewer.camera, tgt = viewer.controls.target;
   const fromP = cam.position.clone(), fromT = tgt.clone(), toP = new THREE.Vector3(...shotOf(v).pos), toT = new THREE.Vector3(...shotOf(v).look);
   const token = ++flight;
   const dur = instant || reduced ? 0 : 1500 + 350 * fromP.distanceTo(toP);
   const t0 = performance.now();
+  flying = true;
   (function step(now) {
     if (token !== flight) return;
     const k = dur ? Math.min(1, (now - t0) / dur) : 1, e = k * k * (3 - 2 * k);
     cam.position.lerpVectors(fromP, toP, e); tgt.lerpVectors(fromT, toT, e);
-    if (k < 1) requestAnimationFrame(step);
+    if (k < 1) requestAnimationFrame(step); else flying = false;
   })(t0);
   return dur;
 }
@@ -310,7 +330,7 @@ function setTour(on) {
   tourBtn.querySelector('svg').innerHTML = on ? '<path d="M2 2h8v8H2z"/>' : '<path d="M2 1l9 5-9 5z"/>';
   orbit = null;
   if (on && viewer) {
-    hideHint(); flight++; planGoal = null; markView(null);
+    hideHint(); hideCaption(); flight++; flying = false; planGoal = null; markView(null);
     const p = viewer.camera.position, now = performance.now();
     // join the lap at the point nearest the camera, easing in from wherever the viewer is now
     orbit = { a: Math.atan2((p.y - LAP.cy) / LAP.ry, (p.x - LAP.cx) / LAP.rx), t0: now, last: now, fromP: p.clone(), fromT: viewer.controls.target.clone() };
@@ -335,7 +355,7 @@ function wallAhead(p, hx, hy) {        // metres from the camera to the wall it 
   if (hy) d.push(((hy > 0 ? ROOM.y[1] : ROOM.y[0]) - p.y) / hy);
   return Math.min(...d);
 }
-function takeOver() { flight++; setTour(false); hideHint(); if (currentView) markView(null); }
+function takeOver() { flight++; flying = false; setTour(false); hideHint(); hideCaption(); if (currentView) markView(null); }
 plan.addEventListener('pointerdown', e => {
   if (!viewer) return;
   e.preventDefault(); takeOver();
@@ -371,6 +391,8 @@ function tick(now) {
     const k = 1 - Math.exp(-Math.min(now - lastTick, 1000) / 70);      // same walking speed at any frame rate
     const dx = (planGoal.x - p.x) * k, dy = (planGoal.y - p.y) * k;
     p.x += dx; p.y += dy; t.x += dx; t.y += dy;
+    // walking from the overview: come down to eye height and look across the room rather than at the floor
+    if (p.z > 1.6) { const kz = 1 - Math.exp(-Math.min(now - lastTick, 1000) / 260); p.z += (0.2 - p.z) * kz; t.z += (-0.4 - t.z) * kz; }
     // walked up to a wall: turn toward the middle of the room instead of staring at it from a few centimetres
     const L = Math.max(Math.hypot(t.x - p.x, t.y - p.y), 0.8);
     let hx = (t.x - p.x) / L, hy = (t.y - p.y) / L;
@@ -383,10 +405,24 @@ function tick(now) {
     }
     if (Math.hypot(planGoal.x - p.x, planGoal.y - p.y) < 0.004 && !planDrag && !facingWall) planGoal = null;
   }
-  p.x = clamp(p.x, ROOM.x); p.y = clamp(p.y, ROOM.y); p.z = clamp(p.z, ROOM.z);
+  if (!flying) {
+    const inside = p.x >= ROOM.x[0] && p.x <= ROOM.x[1] && p.y >= ROOM.y[0] && p.y <= ROOM.y[1];
+    if (inside || p.z < OUT.z[0] - 0.2) { p.x = clamp(p.x, ROOM.x); p.y = clamp(p.y, ROOM.y); }
+    else { p.x = clamp(p.x, OUT.x); p.y = clamp(p.y, OUT.y); }
+    p.z = clamp(p.z, [ROOM.z[0], OUT.z[1]]);
+  }
+  // the ceiling fades out for the overview and whenever the camera is up at ceiling height or above
+  const ceil = viewer.getSceneCount && viewer.getSceneCount() > 1 ? viewer.getSplatScene(1) : null;
+  if (ceil) {
+    const want = currentView === 'overview' || p.z > CEIL_Z - 0.1 ? 0 : 1;
+    ceilAlpha += (want - ceilAlpha) * (reduced ? 1 : 1 - Math.exp(-Math.min(now - lastTick, 1000) / 180));
+    if (Math.abs(want - ceilAlpha) < 0.01) ceilAlpha = want;
+    ceil.opacity = ceilAlpha; ceil.visible = ceilAlpha > 0.01;
+  }
   const a = Math.atan2(t.y - p.y, t.x - p.x), half = Math.atan(Math.tan(viewer.camera.fov * Math.PI / 360) * (viewer.camera.aspect || 1)), r = 1.5;
-  for (const c of [me, halo]) { c.setAttribute('cx', p.x.toFixed(3)); c.setAttribute('cy', (-p.y).toFixed(3)); }
-  cone.setAttribute('d', `M${p.x} ${-p.y}L${p.x + r * Math.cos(a - half)} ${-(p.y + r * Math.sin(a - half))}L${p.x + r * Math.cos(a + half)} ${-(p.y + r * Math.sin(a + half))}Z`);
+  const mx = clamp(p.x, [-3.0, 2.05]), my = clamp(p.y, [-2.85, 4.85]);
+  for (const c of [me, halo]) { c.setAttribute('cx', mx.toFixed(3)); c.setAttribute('cy', (-my).toFixed(3)); }
+  cone.setAttribute('d', `M${mx} ${-my}L${mx + r * Math.cos(a - half)} ${-(my + r * Math.sin(a - half))}L${mx + r * Math.cos(a + half)} ${-(my + r * Math.sin(a + half))}Z`);
   // frame rate: only ever a suggestion, never a silent switch
   if (document.hidden) { fpsT0 = 0; return; }
   if (!fpsT0) { fpsT0 = now; frames = 0; return; }
@@ -418,7 +454,17 @@ async function fetchAll(l, token) {
       showLoad('Loading the scan', `${l.name} quality, ${fmtCount(l.count)} splats`, got / l.bytes, `${(got / 1e6).toFixed(1)} / ${(l.bytes / 1e6).toFixed(1)} MB`);
     }
   }
-  return new Blob(parts, { type: 'application/octet-stream' });
+  // one contiguous buffer, then split it: scene 0 = the room, scene 1 = what the overview hides
+  const all = new Uint8Array(got); let o = 0;
+  for (const part of parts) { all.set(part instanceof Uint8Array ? part : new Uint8Array(part), o); o += part.byteLength; }
+  const n = Math.floor(got / 32), f = new Float32Array(all.buffer, 0, n * 8), room = new Uint8Array(n * 32), extra = new Uint8Array(n * 32);
+  let nr = 0, ne = 0;
+  for (let i = 0; i < n; i++) {
+    const x = f[i * 8], y = f[i * 8 + 1], z = f[i * 8 + 2];
+    const hide = z > CEIL_Z || x < SHELL.x[0] || x > SHELL.x[1] || y < SHELL.y[0] || y > SHELL.y[1];
+    if (hide) { extra.set(all.subarray(i * 32, i * 32 + 32), ne * 32); ne++; } else { room.set(all.subarray(i * 32, i * 32 + 32), nr * 32); nr++; }
+  }
+  return [new Blob([room.subarray(0, nr * 32)]), new Blob([extra.subarray(0, ne * 32)])];
 }
 async function load(id) {
   const token = ++loadToken, l = LEVELS[id];
@@ -430,10 +476,10 @@ async function load(id) {
   session.set('lcc_loading', id);
   try {
     if (viewer) { const old = viewer; viewer = null; try { await old.dispose(); } catch (e) {} }
-    const blob = await fetchAll(l, token);
-    if (!blob || token !== loadToken) return;
+    const blobs = await fetchAll(l, token);
+    if (!blobs || token !== loadToken) return;
     showLoad('Almost there', 'Preparing the view', 1, '');
-    const url = URL.createObjectURL(blob);
+    const urls = blobs.map(b => URL.createObjectURL(b));
     const GS = window['Gaussian Splats 3D'];
     const start = keep ? null : (VIEWS.find(v => v.id === location.hash.slice(1)) || VIEWS[0]);
     // the library reads the display density once, at construction; phones at 3x would cost nine times the pixels
@@ -448,19 +494,21 @@ async function load(id) {
       sharedMemoryForWorkers: false, gpuAcceleratedSort: false, sphericalHarmonicsDegree: 0,
       antialiased: !isPhone, halfPrecisionCovariancesOnGPU: isPhone,
       sceneRevealMode: GS.SceneRevealMode.Instant, logLevel: 0,
+      enableOptionalEffects: true,      // per-scene opacity, used to fade the ceiling
     });
-    await v.addSplatScene(url, { format: GS.SceneFormat.Splat, showLoadingUI: false, splatAlphaRemovalThreshold: 1, progressiveLoad: false });
-    URL.revokeObjectURL(url);
+    await v.addSplatScenes(urls.map(u => ({ path: u, format: GS.SceneFormat.Splat, splatAlphaRemovalThreshold: 1 })), false);
+    urls.forEach(u => URL.revokeObjectURL(u));
     if (token !== loadToken) { try { await v.dispose(); } catch (e) {} return; }
     v.checkForFocalPointChange = () => {};     // a stray tap must not swing the camera to whatever was under the finger
     viewer = v; v.start();
     v.renderer.setClearColor(0xdbe6ef, 1);     // unscanned sky behind the windows: bright like the blown-out photos, not a black hole
-    v.controls.minDistance = 0.25; v.controls.maxDistance = 9; v.controls.enableDamping = true; v.controls.dampingFactor = 0.09; v.controls.rotateSpeed = isPhone ? 0.55 : 0.5;
+    v.controls.minDistance = 0.25; v.controls.maxDistance = 12; v.controls.enableDamping = true; v.controls.dampingFactor = 0.09; v.controls.rotateSpeed = isPhone ? 0.55 : 0.5;
     fitFov();
     const canvas = stage.querySelector('canvas');
     if (canvas) canvas.addEventListener('webglcontextlost', () => showError('The view stopped', 'This device ran out of graphics memory. Reloading in Smooth quality usually fixes it.', [['Reload in Smooth quality', () => { store.set('lcc_level', 'lite'); location.reload(); }]]));
     session.del('lcc_loading');
-    if (start) markView(start.id);
+    if (start) { markView(start.id); showCaption(start); }
+    ceilAlpha = currentView === 'overview' ? 0 : 1;
     $('#load').hidden = true; $('#poster').classList.add('gone');
     showHint();
   } catch (e) {
