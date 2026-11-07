@@ -1,19 +1,19 @@
 <!doctype html>
-<html lang="zh-Hant">
+<html lang="en">
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
 <meta name="theme-color" content="#12161c">
-<meta name="description" content="用手機或電腦瀏覽 Rijks 工作室的 3D Gaussian Splatting 掃描。">
-<meta property="og:title" content="Rijks 工作室掃描">
-<meta property="og:description" content="用手機或電腦瀏覽 Rijks 工作室的 3D Gaussian Splatting 掃描。">
+<meta name="description" content="Explore a 3D Gaussian Splatting scan of studio A55 at the Rijksakademie, on a phone or a computer.">
+<meta property="og:title" content="Rijksakademie A55">
+<meta property="og:description" content="Explore a 3D Gaussian Splatting scan of studio A55 at the Rijksakademie, on a phone or a computer.">
 <meta property="og:image" content="poster.jpg">
-<title>Rijks 工作室掃描</title>
+<title>Rijksakademie A55</title>
 <style>html,body{margin:0;height:100%}[hidden]{display:none!important}</style>
 </head>
 <body>
 <link rel="preconnect" href="https://fonts.googleapis.com">
-<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Noto+Sans+TC:wght@400;500;700&family=DM+Mono:wght@400;500&display=swap">
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,700&family=DM+Mono:wght@400;500&display=swap">
 <style>
 /* Layout: the scan fills the whole screen; every control floats over it and sits within thumb reach at the bottom.
    One deliberate dark look: a dim surround keeps attention on the room. Neutrals lean to the blue-grey of the scanned
@@ -29,7 +29,7 @@
   --accent: #ffb25e;
   --on-accent: #241505;
   --danger: #ff9d8a;
-  --sans: "Noto Sans TC", "PingFang TC", "Microsoft JhengHei", system-ui, sans-serif;
+  --sans: "DM Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
   --mono: "DM Mono", ui-monospace, "SF Mono", Consolas, monospace;
   --gutter-l: max(16px, env(safe-area-inset-left, 0px));
   --gutter-r: max(16px, env(safe-area-inset-right, 0px));
@@ -121,21 +121,21 @@ dd.n { font-family: var(--mono); font-variant-numeric: tabular-nums; }
 @media (prefers-reduced-motion: reduce) { #poster, #hint, #bar i { transition: none; } }
 </style>
 
-<div id="stage" aria-label="Rijks 工作室的 3D 掃描，可用手勢或滑鼠環顧"></div>
+<div id="stage" aria-label="3D scan of Rijksakademie A55. Look around with touch gestures or the mouse."></div>
 <img id="poster" src="poster.jpg" alt="">
 
 <header class="top">
   <div class="brand">
-    <h1>Rijks 工作室掃描</h1>
-    <p>走一圈掃下來的真實房間，可以自由環顧</p>
+    <h1>Rijksakademie A55</h1>
+    <p>A real studio, scanned in one walk</p>
   </div>
   <div class="tools">
-    <button class="icon" id="btnFull" aria-label="全螢幕" hidden><svg viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
-    <button class="icon" id="btnInfo" aria-label="畫質與說明"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 7.6v.2"/></svg></button>
+    <button class="icon" id="btnFull" aria-label="Full screen" hidden><svg viewBox="0 0 24 24"><path d="M4 9V4h5M20 9V4h-5M4 15v5h5M20 15v5h-5"/></svg></button>
+    <button class="icon" id="btnInfo" aria-label="Quality and info"><svg viewBox="0 0 24 24"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 7.6v.2"/></svg></button>
   </div>
 </header>
 
-<svg id="plan" viewBox="-3.1 -4.95 5.25 7.9" tabindex="0" role="application" aria-label="房間平面圖。拖曳可以移動你在房間裡的位置，也可以用方向鍵移動。">
+<svg id="plan" viewBox="-3.1 -4.95 5.25 7.9" tabindex="0" role="application" aria-label="Floor plan. Drag to move around the room, or use the arrow keys.">
   <!-- SVG y = -room y, so the plan keeps the room's north up; 1 unit = 1 m -->
   <rect class="room" x="-2.866" y="-4.692" width="4.769" height="7.398"/>
   <g class="win"><path d="M-2.866 1.49V2.49"/><path d="M-2.866 0V1.01"/><path d="M-2.866 -2.07V-.99"/><path d="M-2.866 -3.51V-2.46"/></g>
@@ -147,11 +147,11 @@ dd.n { font-family: var(--mono); font-variant-numeric: tabular-nums; }
 
 <div class="rail">
   <span id="hint" class="gone"></span>
-  <nav class="chips" id="chips" aria-label="視角"></nav>
+  <nav class="chips" id="chips" aria-label="Views"></nav>
 </div>
 
 <div id="load" role="status">
-  <h2 id="loadTitle">正在載入掃描</h2>
+  <h2 id="loadTitle">Loading the scan</h2>
   <p id="loadMsg"></p>
   <div id="bar"><i></i></div>
   <p id="loadNum"></p>
@@ -162,45 +162,45 @@ dd.n { font-family: var(--mono); font-variant-numeric: tabular-nums; }
 <div id="scrim" hidden></div>
 <aside id="sheet" role="dialog" aria-modal="true" aria-labelledby="sheetTitle" hidden>
   <div class="sheethead">
-    <h2 id="sheetTitle">關於這個掃描</h2>
-    <button class="icon" id="btnClose" aria-label="關閉"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
+    <h2 id="sheetTitle">About this scan</h2>
+    <button class="icon" id="btnClose" aria-label="Close"><svg viewBox="0 0 24 24"><path d="M6 6l12 12M18 6L6 18"/></svg></button>
   </div>
-  <p>這是用手持掃描器 PortalCam 走過房間後重建的 3D 場景。畫面由上百萬顆半透明的色塊（3D 高斯）組成，所以反光、線材和織物都很接近照片，而且可以從任何角度看。</p>
+  <p>This 3D scene was rebuilt from a single walk through the studio with a handheld PortalCam scanner. It is made of up to a million translucent colour blobs (3D Gaussians), so reflections, cables and fabric look close to a photo, and you can view them from any angle.</p>
 
-  <h3>畫質</h3>
-  <div class="levels" id="levels" role="radiogroup" aria-label="畫質"></div>
+  <h3>Quality</h3>
+  <div class="levels" id="levels" role="radiogroup" aria-label="Quality"></div>
 
-  <h3>操作方式</h3>
+  <h3>Controls</h3>
   <dl class="gest" id="gestures"></dl>
 
-  <h3>掃描資料</h3>
+  <h3>Scan details</h3>
   <dl>
-    <dt>掃描器</dt><dd>XGRIDS PortalCam</dd>
-    <dt>重建軟體</dt><dd>LCC Studio</dd>
-    <dt>掃描日期</dt><dd class="n">2026-10-02</dd>
-    <dt>掃描時間</dt><dd>約 2 分 50 秒，走了約 56 公尺</dd>
-    <dt>房間大小</dt><dd class="n">4.8 × 7.4 × 3.8 m</dd>
-    <dt>目前載入</dt><dd class="n" id="curCount">–</dd>
+    <dt>Scanner</dt><dd>XGRIDS PortalCam</dd>
+    <dt>Reconstruction</dt><dd>LCC Studio</dd>
+    <dt>Scanned</dt><dd class="n">2026-10-02</dd>
+    <dt>Capture</dt><dd>About 2 min 50 s, a 56 m walk</dd>
+    <dt>Room size</dt><dd class="n">4.8 × 7.4 × 3.8 m</dd>
+    <dt>Loaded now</dt><dd class="n" id="curCount">–</dd>
   </dl>
-  <p style="color:var(--muted);font-size:13.5px">窗外較遠的街景和透明度極低的色塊已裁掉，檔案會小一些。走到沒掃到的角落時，畫面可能出現破洞或模糊。</p>
+  <p style="color:var(--muted);font-size:13.5px">The distant street outside the windows and nearly invisible blobs were trimmed to keep the files small. Corners the scanner never saw may look patchy or blurred.</p>
 </aside>
 
 <script src="js/three.min.js"></script>
 <script src="js/gaussian-splats-3d.umd.js"></script>
 <script>
 const LEVELS = {
-  lite:     { name: '流暢',   note: '適合手機與行動網路', chunks: ['splat/lite/part00.wasm'], count: 289627, bytes: 9268064 },
-  standard: { name: '標準',   note: '較新的手機、平板',   chunks: ['splat/standard/part00.wasm', 'splat/standard/part01.wasm'], count: 574691, bytes: 18390112 },
-  full:     { name: '高畫質', note: '電腦，細節最完整',   chunks: ['splat/full/part00.wasm', 'splat/full/part01.wasm', 'splat/full/part02.wasm'], count: 1112022, bytes: 35584704 },
+  lite:     { name: 'Smooth',  note: 'Phones and mobile data', chunks: ['splat/lite/part00.wasm'], count: 289627, bytes: 9268064 },
+  standard: { name: 'Standard', note: 'Newer phones and tablets',   chunks: ['splat/standard/part00.wasm', 'splat/standard/part01.wasm'], count: 574691, bytes: 18390112 },
+  full:     { name: 'High',    note: 'Computers, full detail',   chunks: ['splat/full/part00.wasm', 'splat/full/part01.wasm', 'splat/full/part02.wasm'], count: 1112022, bytes: 35584704 },
 };
 // room frame: Z up, metres, the floor at z -1.43
 const VIEWS = [
-  { id: 'overview', name: '全景', pos: [1.55, -1.05, 0.19], look: [-2.6, 1.0, -0.38],
+  { id: 'overview', name: 'Overview', pos: [1.55, -1.05, 0.19], look: [-2.6, 1.0, -0.38],
     portrait: { pos: [1.45, -0.95, 0.55], look: [-1.1, 4.0, -0.95] } },      // a tall screen looks along the room's long side
-  { id: 'desk',     name: '書桌', pos: [0.55, 2.05, 0.07], look: [-0.65, 4.25, -0.61] },
-  { id: 'sofa',     name: '沙發', pos: [0.95, -0.35, -0.18], look: [-0.35, -2.35, -0.98] },
-  { id: 'shelf',    name: '層架', pos: [-0.55, -0.75, 0.02], look: [-2.15, -2.55, -0.58] },
-  { id: 'windows',  name: '窗邊', pos: [-0.55, 0.05, -0.18], look: [-2.85, 1.2, -0.38] },
+  { id: 'desk',     name: 'Desk', pos: [0.55, 2.05, 0.07], look: [-0.65, 4.25, -0.61] },
+  { id: 'sofa',     name: 'Sofa', pos: [0.95, -0.35, -0.18], look: [-0.35, -2.35, -0.98] },
+  { id: 'shelf',    name: 'Shelves', pos: [-0.55, -0.75, 0.02], look: [-2.15, -2.55, -0.58] },
+  { id: 'windows',  name: 'Windows', pos: [-0.55, 0.05, -0.18], look: [-2.85, 1.2, -0.38] },
 ];
 const ROOM = { x: [-2.72, 1.76], y: [-2.56, 4.55], z: [-1.33, 2.2] };     // cameras stay inside the walls
 // auto tour: a slow lap on an ellipse just inside the walls, always facing the middle of the room
@@ -213,7 +213,7 @@ const hasTouch = matchMedia('(pointer: coarse)').matches;
 const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
 const shotOf = v => (innerHeight > innerWidth && v.portrait) || v;
 const fmtMB = b => `${(b / 1e6).toFixed(0)} MB`;
-const fmtCount = n => `${Math.round(n / 1e4)} 萬`;
+const fmtCount = n => n >= 1e6 ? `${(n / 1e6).toFixed(1)}M` : `${Math.round(n / 1e3)}K`;
 const realDPR = window.devicePixelRatio || 1;
 
 let viewer = null, level = null, tourOn = false, orbit = null, planGoal = null, planDrag = false, flight = 0, currentView = null, slowWarned = false, loadToken = 0;
@@ -222,7 +222,7 @@ let viewer = null, level = null, tourOn = false, orbit = null, planGoal = null, 
 const chips = $('#chips');
 const tourBtn = document.createElement('button');
 tourBtn.className = 'chip tour'; tourBtn.type = 'button'; tourBtn.setAttribute('aria-pressed', 'false');
-tourBtn.innerHTML = '<svg viewBox="0 0 12 12"><path d="M2 1l9 5-9 5z"/></svg><span>自動導覽</span>';
+tourBtn.innerHTML = '<svg viewBox="0 0 12 12"><path d="M2 1l9 5-9 5z"/></svg><span>Auto tour</span>';
 tourBtn.onclick = () => setTour(!tourOn);
 chips.append(tourBtn);
 for (const v of VIEWS) {
@@ -241,13 +241,13 @@ const lv = $('#levels');
 for (const [id, l] of Object.entries(LEVELS)) {
   const b = document.createElement('button');
   b.className = 'level'; b.type = 'button'; b.setAttribute('role', 'radio'); b.dataset.level = id;
-  b.innerHTML = `<span><b>${l.name}</b><small>${l.note}</small></span><span class="num">${fmtCount(l.count)}顆<br>${fmtMB(l.bytes)}</span>`;
+  b.innerHTML = `<span><b>${l.name}</b><small>${l.note}</small></span><span class="num">${fmtCount(l.count)} splats<br>${fmtMB(l.bytes)}</span>`;
   b.onclick = () => { closeSheet(); if (id !== level) { store.set('lcc_level', id); load(id); } };
   lv.append(b);
 }
 $('#gestures').innerHTML = (hasTouch
-  ? [['單指拖曳', '環顧四周'], ['雙指開合', '靠近或退後'], ['雙指拖曳', '平移'], ['拖曳小地圖', '走到房間另一處'], ['自動導覽', '繞著房間中心走一圈，碰一下畫面就停']]
-  : [['左鍵拖曳', '環顧四周'], ['滾輪', '靠近或退後'], ['右鍵拖曳', '平移'], ['拖曳小地圖', '走到房間另一處'], ['自動導覽', '繞著房間中心走一圈，點一下畫面就停']])
+  ? [['Drag with one finger', 'Look around'], ['Pinch', 'Move closer or back'], ['Drag with two fingers', 'Pan'], ['Drag the mini map', 'Walk to another spot'], ['Auto tour', 'Circles the room; tap the screen to stop']]
+  : [['Left-drag', 'Look around'], ['Scroll', 'Move closer or back'], ['Right-drag', 'Pan'], ['Drag the mini map', 'Walk to another spot'], ['Auto tour', 'Circles the room; click to stop']])
   .map(([a, b]) => `<dt>${a}</dt><dd>${b}</dd>`).join('');
 
 let lastFocus = null;
@@ -281,7 +281,7 @@ function toast(msg, list) {
 let hintTimer = 0;
 function showHint() {
   if (store.get('lcc_hint_seen2')) return;
-  $('#hint').textContent = hasTouch ? '單指拖曳環顧，雙指縮放；拖曳小地圖可以移動位置' : '拖曳環顧，滾輪縮放；拖曳小地圖可以移動位置';
+  $('#hint').textContent = hasTouch ? 'Drag to look around, pinch to zoom. Drag the mini map to move.' : 'Drag to look around, scroll to zoom. Drag the mini map to move.';
   $('#hint').classList.remove('gone');
   hintTimer = setTimeout(hideHint, 7000);
 }
@@ -317,7 +317,7 @@ function goTo(id, instant) {
 function setTour(on) {
   tourOn = on;
   tourBtn.setAttribute('aria-pressed', on ? 'true' : 'false');
-  tourBtn.querySelector('span').textContent = on ? '停止導覽' : '自動導覽';
+  tourBtn.querySelector('span').textContent = on ? 'Stop tour' : 'Auto tour';
   tourBtn.querySelector('svg').innerHTML = on ? '<path d="M2 2h8v8H2z"/>' : '<path d="M2 1l9 5-9 5z"/>';
   orbit = null;
   if (on && viewer) {
@@ -407,7 +407,7 @@ function tick(now) {
     lowSpells = fps < 20 ? lowSpells + 1 : 0;
     if (lowSpells >= 2 && !slowWarned && level !== 'lite') {
       slowWarned = true;
-      toast('這台裝置跑起來有點吃力，改用流暢畫質會順很多。', [['改用流暢', () => { $('#toast').hidden = true; store.set('lcc_level', 'lite'); load('lite'); }], ['先不要', () => { $('#toast').hidden = true; }, true]]);
+      toast('This device is struggling. Smooth quality will run much better.', [['Use Smooth', () => { $('#toast').hidden = true; store.set('lcc_level', 'lite'); load('lite'); }], ['Not now', () => { $('#toast').hidden = true; }, true]]);
     }
   }
 }
@@ -426,7 +426,7 @@ async function fetchAll(l, token) {
       if (done) break;
       if (token !== loadToken) { reader.cancel().catch(() => {}); return null; }
       parts.push(value); got += value.byteLength;
-      showLoad('正在載入掃描', `${l.name}畫質，${fmtCount(l.count)}顆色塊`, got / l.bytes, `${(got / 1e6).toFixed(1)} / ${(l.bytes / 1e6).toFixed(1)} MB`);
+      showLoad('Loading the scan', `${l.name} quality, ${fmtCount(l.count)} splats`, got / l.bytes, `${(got / 1e6).toFixed(1)} / ${(l.bytes / 1e6).toFixed(1)} MB`);
     }
   }
   return new Blob(parts, { type: 'application/octet-stream' });
@@ -436,15 +436,15 @@ async function load(id) {
   const keep = viewer ? { p: viewer.camera.position.toArray(), t: viewer.controls.target.toArray() } : null;
   setTour(false); flight++; level = id; slowWarned = false; lowSpells = 0;
   lv.querySelectorAll('.level').forEach(b => b.setAttribute('aria-checked', b.dataset.level === id ? 'true' : 'false'));
-  $('#curCount').textContent = `${l.count.toLocaleString()} 顆（${l.name}）`;
+  $('#curCount').textContent = `${l.count.toLocaleString('en-US')} splats (${l.name})`;
   $('#poster').classList.remove('gone');
-  showLoad('正在載入掃描', `${l.name}畫質，${fmtCount(l.count)}顆色塊`, 0, `0 / ${(l.bytes / 1e6).toFixed(1)} MB`);
+  showLoad('Loading the scan', `${l.name} quality, ${fmtCount(l.count)} splats`, 0, `0 / ${(l.bytes / 1e6).toFixed(1)} MB`);
   session.set('lcc_loading', id);
   try {
     if (viewer) { const old = viewer; viewer = null; try { await old.dispose(); } catch (e) {} }
     const blob = await fetchAll(l, token);
     if (!blob || token !== loadToken) return;
-    showLoad('快完成了', '正在準備畫面', 1, '');
+    showLoad('Almost there', 'Preparing the view', 1, '');
     const url = URL.createObjectURL(blob);
     const GS = window['Gaussian Splats 3D'];
     const start = keep ? null : (VIEWS.find(v => v.id === location.hash.slice(1)) || VIEWS[0]);
@@ -470,7 +470,7 @@ async function load(id) {
     v.controls.minDistance = 0.25; v.controls.maxDistance = 9; v.controls.enableDamping = true; v.controls.dampingFactor = 0.09; v.controls.rotateSpeed = isPhone ? 0.55 : 0.5;
     fitFov();
     const canvas = stage.querySelector('canvas');
-    if (canvas) canvas.addEventListener('webglcontextlost', () => showError('畫面中斷了', '這台裝置的顯示記憶體不夠，重新載入並改用流暢畫質通常就能解決。', [['用流暢畫質重新載入', () => { store.set('lcc_level', 'lite'); location.reload(); }]]));
+    if (canvas) canvas.addEventListener('webglcontextlost', () => showError('The view stopped', 'This device ran out of graphics memory. Reloading in Smooth quality usually fixes it.', [['Reload in Smooth quality', () => { store.set('lcc_level', 'lite'); location.reload(); }]]));
     session.del('lcc_loading');
     if (start) markView(start.id);
     $('#load').hidden = true; $('#poster').classList.add('gone');
@@ -479,20 +479,20 @@ async function load(id) {
     console.error(e);
     session.del('lcc_loading');
     if (token !== loadToken) return;
-    showError('載入失敗', navigator.onLine === false ? '目前沒有網路連線，連上後再試一次。' : '掃描檔沒有順利載入，可以再試一次，或改用檔案較小的流暢畫質。',
-      [['再試一次', () => load(id)]].concat(id === 'lite' ? [] : [['改用流暢畫質', () => { store.set('lcc_level', 'lite'); load('lite'); }, true]]));
+    showError('Could not load the scan', navigator.onLine === false ? 'You are offline. Try again once you are connected.' : 'The scan files did not load. Try again, or switch to the smaller Smooth quality.',
+      [['Try again', () => load(id)]].concat(id === 'lite' ? [] : [['Use Smooth quality', () => { store.set('lcc_level', 'lite'); load('lite'); }, true]]));
   }
 }
 
 /* ---------- start ---------- */
 const gl = document.createElement('canvas').getContext('webgl2');
 if (!gl) {
-  showError('這個瀏覽器無法顯示 3D 掃描', '需要支援 WebGL 2 的瀏覽器。請更新 Safari 或 Chrome，或換一台裝置開啟。');
+  showError('This browser cannot show the 3D scan', 'It needs WebGL 2. Update Safari or Chrome, or open the page on another device.');
 } else {
   const crashed = session.get('lcc_loading');    // the page reloaded in the middle of a load: most likely out of memory
   const saved = store.get('lcc_level');
   let start = LEVELS[saved] ? saved : (isPhone ? 'lite' : 'full');
-  if (crashed && crashed !== 'lite') { start = 'lite'; store.set('lcc_level', 'lite'); setTimeout(() => toast('上次載入時記憶體不足，已改用流暢畫質。'), 1000); }
+  if (crashed && crashed !== 'lite') { start = 'lite'; store.set('lcc_level', 'lite'); setTimeout(() => toast('The last load ran out of memory, so Smooth quality is on.'), 1000); }
   load(start);
 }
 </script>
