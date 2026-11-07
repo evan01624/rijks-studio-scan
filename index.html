@@ -3,7 +3,7 @@
 <head>
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
-<meta name="theme-color" content="#12161c">
+<meta name="theme-color" content="#0e0e0e">
 <meta name="description" content="Explore a 3D Gaussian Splatting scan of studio A55 at the Rijksakademie, on a phone or a computer.">
 <meta property="og:title" content="Rijksakademie A55">
 <meta property="og:description" content="Explore a 3D Gaussian Splatting scan of studio A55 at the Rijksakademie, on a phone or a computer.">
@@ -16,19 +16,18 @@
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=DM+Sans:opsz,wght@9..40,400;9..40,500;9..40,700&family=DM+Mono:wght@400;500&display=swap">
 <style>
 /* Layout: the scan fills the whole screen; every control floats over it and sits within thumb reach at the bottom.
-   One deliberate dark look: a dim surround keeps attention on the room. Neutrals lean to the blue-grey of the scanned
-   floor paint, the accent is the warm bulb of the floor lamp in the room. */
+   Monochrome on purpose: the UI is greyscale glass so the only colour on screen is the scanned room. */
 :root {
   color-scheme: dark;
-  --bg: #12161c;
-  --glass: rgba(20, 25, 32, .78);
-  --glass-solid: #1b2129;
-  --line: rgba(205, 220, 235, .16);
-  --fg: #eef2f6;
-  --muted: #a4b0bd;
-  --accent: #ffb25e;
-  --on-accent: #241505;
-  --danger: #ff9d8a;
+  --bg: #0e0e0e;
+  --glass: rgba(14, 14, 14, .46);
+  --glass-solid: #151515;
+  --line: rgba(255, 255, 255, .12);
+  --line-strong: rgba(255, 255, 255, .5);
+  --fg: #f4f4f4;
+  --muted: #9b9b9b;
+  --accent: #f4f4f4;
+  --on-accent: #0e0e0e;
   --sans: "DM Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
   --mono: "DM Mono", ui-monospace, "SF Mono", Consolas, monospace;
   --gutter-l: max(16px, env(safe-area-inset-left, 0px));
@@ -37,88 +36,90 @@
   --bottom: env(safe-area-inset-bottom, 0px);
 }
 html, body { height: 100%; overflow: hidden; overscroll-behavior: none; }
-body { background: var(--bg); color: var(--fg); font: 400 15px/1.55 var(--sans); -webkit-tap-highlight-color: transparent; }
+body { background: var(--bg); color: var(--fg); font: 400 15px/1.5 var(--sans); -webkit-tap-highlight-color: transparent; }
 button { font: inherit; color: inherit; background: none; border: 0; cursor: pointer; touch-action: manipulation; }
-button:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
+button:focus-visible { outline: 1.5px solid var(--fg); outline-offset: 2px; }
 
 #stage { position: fixed; inset: 0; touch-action: none; background: var(--bg); }
 #stage canvas { display: block; touch-action: none; }
-#poster { position: fixed; inset: 0; width: 100%; height: 100%; max-width: none; object-fit: cover; filter: saturate(.85) brightness(.55); transition: opacity .7s; pointer-events: none; }
+#poster { position: fixed; inset: 0; width: 100%; height: 100%; max-width: none; object-fit: cover; filter: brightness(.5); transition: opacity .7s; pointer-events: none; }
 #poster.gone { opacity: 0; }
 
 .top { position: fixed; top: 0; left: 0; right: 0; display: flex; align-items: flex-start; justify-content: space-between; gap: 12px;
-  padding: calc(12px + var(--top)) var(--gutter-r) 28px var(--gutter-l);
-  background: linear-gradient(rgba(10, 13, 18, .62), transparent); pointer-events: none; }
-.brand { min-width: 0; text-shadow: 0 1px 8px rgba(0, 0, 0, .6); }
-.brand h1 { margin: 0; font-size: 17px; font-weight: 700; line-height: 1.3; }
-.brand p { margin: 0; font-size: 12.5px; color: #d7dfe7; }
-.tools { display: flex; gap: 8px; flex: none; pointer-events: auto; }
-.icon { width: 44px; height: 44px; display: grid; place-items: center; border-radius: 50%; background: var(--glass); border: 1px solid var(--line); backdrop-filter: blur(10px); }
-.icon svg { width: 20px; height: 20px; fill: none; stroke: currentColor; stroke-width: 1.8; stroke-linecap: round; stroke-linejoin: round; }
+  padding: calc(14px + var(--top)) var(--gutter-r) 32px var(--gutter-l);
+  background: linear-gradient(rgba(0, 0, 0, .42), transparent); pointer-events: none; }
+.brand { min-width: 0; text-shadow: 0 1px 10px rgba(0, 0, 0, .5); }
+.brand h1 { margin: 0; font-size: 16px; font-weight: 500; line-height: 1.3; letter-spacing: .01em; }
+.brand p { margin: 1px 0 0; font-size: 12.5px; color: rgba(255, 255, 255, .62); }
+.tools { display: flex; gap: 6px; flex: none; pointer-events: auto; }
+.icon { width: 44px; height: 44px; display: grid; place-items: center; border-radius: 50%; background: var(--glass); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); }
+.icon svg { width: 19px; height: 19px; fill: none; stroke: currentColor; stroke-width: 1.5; stroke-linecap: round; stroke-linejoin: round; }
 
-/* floor plan, drawn to scale from the measured room */
-#plan { position: fixed; right: var(--gutter-r); top: calc(68px + var(--top)); width: 96px; height: auto; padding: 6px; border-radius: 10px;
-  background: var(--glass); border: 1px solid var(--line); backdrop-filter: blur(10px); touch-action: none; cursor: grab; user-select: none; -webkit-user-select: none; }
-#plan:focus-visible { outline: 2px solid var(--accent); outline-offset: 2px; }
-#plan.dragging { cursor: grabbing; border-color: var(--accent); }
-#plan .room { fill: rgba(205, 220, 235, .07); stroke: var(--muted); stroke-width: .07; }
-#plan .win { stroke: #9fd0ff; stroke-width: .16; stroke-linecap: butt; }
-#plan .door { stroke: var(--fg); stroke-width: .14; }
-#plan .cone { fill: var(--accent); opacity: .3; }
-#plan .me { fill: var(--accent); stroke: var(--on-accent); stroke-width: .05; }
-#plan .halo { fill: var(--accent); opacity: 0; transition: opacity .15s; }
-#plan.dragging .halo { opacity: .28; }
+/* floor plan, drawn to scale from the measured room; translucent so the scan shows through */
+#plan { position: fixed; right: var(--gutter-r); top: calc(70px + var(--top)); width: 96px; height: auto; padding: 6px; border-radius: 8px;
+  background: rgba(0, 0, 0, .18); opacity: .72; transition: opacity .2s, background .2s;
+  touch-action: none; cursor: grab; user-select: none; -webkit-user-select: none; }
+#plan:hover, #plan:focus-visible, #plan.dragging { opacity: 1; background: rgba(0, 0, 0, .3); }
+#plan:focus-visible { outline: 1.5px solid var(--fg); outline-offset: 2px; }
+#plan.dragging { cursor: grabbing; }
+#plan .room { fill: rgba(255, 255, 255, .05); stroke: rgba(255, 255, 255, .75); stroke-width: .05; }
+#plan .win { stroke: #fff; stroke-width: .2; stroke-linecap: butt; }
+#plan .door { stroke: rgba(255, 255, 255, .45); stroke-width: .2; }
+#plan .cone { fill: #fff; opacity: .22; }
+#plan .me { fill: #fff; stroke: rgba(0, 0, 0, .6); stroke-width: .05; }
+#plan .halo { fill: #fff; opacity: 0; transition: opacity .15s; }
+#plan.dragging .halo { opacity: .2; }
 
-.rail { position: fixed; left: 0; right: 0; bottom: 0; padding-top: 34px; padding-bottom: calc(12px + var(--bottom));
-  background: linear-gradient(transparent, rgba(10, 13, 18, .72)); pointer-events: none; }
-#hint { display: block; width: fit-content; max-width: calc(100% - 32px); margin: 0 auto 10px; padding: 6px 12px; border-radius: 99px; background: var(--glass); font-size: 13px; color: var(--fg); text-align: center; transition: opacity .4s; }
+.rail { position: fixed; left: 0; right: 0; bottom: 0; padding-top: 36px; padding-bottom: calc(14px + var(--bottom));
+  background: linear-gradient(transparent, rgba(0, 0, 0, .5)); pointer-events: none; }
+#hint { display: block; width: fit-content; max-width: calc(100% - 32px); margin: 0 auto 10px; padding: 5px 12px; border-radius: 99px; background: var(--glass); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); font-size: 12.5px; color: rgba(255, 255, 255, .85); text-align: center; transition: opacity .4s; }
 #hint.gone { opacity: 0; }
-.chips { display: flex; gap: 8px; overflow-x: auto; scrollbar-width: none; pointer-events: auto; padding-left: var(--gutter-l); padding-right: var(--gutter-r); scroll-padding-inline: 16px; }
+.chips { display: flex; gap: 6px; overflow-x: auto; scrollbar-width: none; pointer-events: auto; padding-left: var(--gutter-l); padding-right: var(--gutter-r); scroll-padding-inline: 16px; }
 .chips::-webkit-scrollbar { display: none; }
-.chip { flex: none; min-height: 44px; padding: 0 16px; border-radius: 22px; background: var(--glass); border: 1px solid var(--line); backdrop-filter: blur(10px); white-space: nowrap; font-weight: 500; display: inline-flex; align-items: center; gap: 7px; }
-.chip[aria-current="true"] { background: var(--accent); color: var(--on-accent); border-color: transparent; }
-.chip.tour { color: var(--accent); }
-.chip.tour svg { width: 13px; height: 13px; fill: currentColor; }
-.chip.tour[aria-pressed="true"] { background: var(--accent); color: var(--on-accent); border-color: transparent; }
-@media (min-width: 760px) { .chips { justify-content: center; } #plan { width: 128px; } .brand h1 { font-size: 19px; } }
+.chip { flex: none; min-height: 44px; padding: 0 16px; border-radius: 22px; background: var(--glass); backdrop-filter: blur(12px); -webkit-backdrop-filter: blur(12px); white-space: nowrap; font-size: 14px; display: inline-flex; align-items: center; gap: 7px; color: rgba(255, 255, 255, .88); transition: background .15s, color .15s; }
+.chip[aria-current="true"], .chip.tour[aria-pressed="true"] { background: var(--accent); color: var(--on-accent); }
+.chip.tour svg { width: 10px; height: 10px; fill: currentColor; }
+@media (hover: hover) { .chip:not([aria-current="true"]):not([aria-pressed="true"]):hover { background: rgba(40, 40, 40, .62); color: #fff; } }
+@media (min-width: 760px) { .chips { justify-content: center; } #plan { width: 128px; } .brand h1 { font-size: 17px; } }
 /* short landscape phones: keep the scan visible */
 @media (max-height: 460px) { #plan { width: 72px; top: calc(62px + var(--top)); } .rail { padding-top: 8px; padding-bottom: calc(8px + var(--bottom)); } #hint { display: none; } .top { padding-bottom: 8px; } }
 
 /* loading + errors */
-#load { position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%); width: min(320px, calc(100% - 48px)); padding: 18px 20px; border-radius: 14px; background: var(--glass); border: 1px solid var(--line); backdrop-filter: blur(14px); }
-#load h2 { margin: 0 0 2px; font-size: 16px; font-weight: 700; }
-#load p { margin: 0; font-size: 13.5px; color: var(--muted); }
-#bar { height: 5px; margin: 12px 0 8px; border-radius: 3px; background: rgba(205, 220, 235, .16); overflow: hidden; }
-#bar i { display: block; height: 100%; width: 0; background: var(--accent); transition: width .2s; }
-#loadNum { font-family: var(--mono); font-variant-numeric: tabular-nums; }
+#load { position: fixed; left: 50%; top: 50%; transform: translate(-50%, -50%); width: min(300px, calc(100% - 48px)); padding: 18px 20px; border-radius: 12px; background: var(--glass); backdrop-filter: blur(16px); -webkit-backdrop-filter: blur(16px); }
+#load h2 { margin: 0 0 2px; font-size: 15px; font-weight: 500; }
+#load p { margin: 0; font-size: 13px; color: var(--muted); }
+#bar { height: 2px; margin: 14px 0 8px; border-radius: 1px; background: rgba(255, 255, 255, .14); overflow: hidden; }
+#bar i { display: block; height: 100%; width: 0; background: var(--fg); transition: width .2s; }
+#loadNum { font-family: var(--mono); font-size: 12px; font-variant-numeric: tabular-nums; }
 .btnrow { display: flex; flex-wrap: wrap; gap: 8px; margin-top: 12px; }
-.btn { min-height: 44px; padding: 0 16px; border-radius: 10px; background: var(--accent); color: var(--on-accent); font-weight: 700; }
-.btn.alt { background: transparent; border: 1px solid var(--line); color: var(--fg); font-weight: 500; }
+.btn { min-height: 44px; padding: 0 16px; border-radius: 22px; background: var(--accent); color: var(--on-accent); font-weight: 500; }
+.btn.alt { background: transparent; border: 1px solid var(--line-strong); color: var(--fg); }
 
-#toast { position: fixed; left: 50%; bottom: calc(84px + var(--bottom)); transform: translateX(-50%); width: min(380px, calc(100% - 32px)); padding: 12px 14px; border-radius: 12px; background: var(--glass-solid); border: 1px solid var(--line); font-size: 14px; }
+#toast { position: fixed; left: 50%; bottom: calc(86px + var(--bottom)); transform: translateX(-50%); width: min(360px, calc(100% - 32px)); padding: 12px 14px; border-radius: 12px; background: var(--glass-solid); border: 1px solid var(--line); font-size: 14px; }
 #toast .btnrow { margin-top: 8px; }
 
 /* details: bottom sheet on phones, side panel on wide screens */
-#scrim { position: fixed; inset: 0; background: rgba(6, 8, 11, .45); }
-#sheet { position: fixed; left: 0; right: 0; bottom: 0; max-height: 86%; overflow-y: auto; overscroll-behavior: contain; background: var(--glass-solid); border-radius: 18px 18px 0 0; border-top: 1px solid var(--line);
+#scrim { position: fixed; inset: 0; background: rgba(0, 0, 0, .4); }
+#sheet { position: fixed; left: 0; right: 0; bottom: 0; max-height: 86%; overflow-y: auto; overscroll-behavior: contain; background: var(--glass-solid); border-radius: 16px 16px 0 0;
   padding-top: 8px; padding-bottom: calc(20px + var(--bottom)); padding-left: var(--gutter-l); padding-right: var(--gutter-r); }
-@media (min-width: 760px) { #sheet { left: auto; top: 0; width: 380px; max-height: none; border-radius: 0; border-top: 0; border-left: 1px solid var(--line); padding-top: calc(16px + var(--top)); } }
+@media (min-width: 760px) { #sheet { left: auto; top: 0; width: 360px; max-height: none; border-radius: 0; border-left: 1px solid var(--line); padding-top: calc(16px + var(--top)); } }
 .sheethead { display: flex; align-items: center; justify-content: space-between; gap: 12px; }
-#sheet h2 { margin: 0; font-size: 18px; font-weight: 700; }
-#sheet h3 { margin: 22px 0 8px; font-size: 13px; font-weight: 500; letter-spacing: .06em; color: var(--muted); }
-#sheet p { margin: 8px 0 0; max-width: 62ch; }
-.levels { display: grid; gap: 8px; }
-.level { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 52px; padding: 8px 14px; border-radius: 12px; border: 1px solid var(--line); text-align: left; }
-.level[aria-checked="true"] { border-color: var(--accent); box-shadow: inset 0 0 0 1px var(--accent); }
+#sheet .icon { background: transparent; }
+#sheet h2 { margin: 0; font-size: 17px; font-weight: 500; }
+#sheet h3 { margin: 26px 0 10px; font-size: 11px; font-weight: 500; letter-spacing: .12em; text-transform: uppercase; color: var(--muted); }
+#sheet p { margin: 8px 0 0; max-width: 62ch; color: rgba(255, 255, 255, .82); font-size: 14.5px; }
+.levels { display: grid; gap: 6px; }
+.level { display: flex; align-items: center; justify-content: space-between; gap: 12px; min-height: 52px; padding: 8px 14px; border-radius: 10px; border: 1px solid var(--line); text-align: left; transition: border-color .15s; }
+.level[aria-checked="true"] { border-color: var(--fg); }
 .level b { font-weight: 500; display: block; }
 .level small { display: block; font-size: 12.5px; color: var(--muted); }
-.level .num { flex: none; font-family: var(--mono); font-size: 13px; color: var(--muted); text-align: right; font-variant-numeric: tabular-nums; }
-dl { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 7px 16px; margin: 0; }
+.level .num { flex: none; font-family: var(--mono); font-size: 12px; color: var(--muted); text-align: right; font-variant-numeric: tabular-nums; }
+dl { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 8px 16px; margin: 0; }
 dt { color: var(--muted); font-size: 13.5px; }
 dd { margin: 0; font-size: 14px; }
-dd.n { font-family: var(--mono); font-variant-numeric: tabular-nums; }
-.gest { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 6px 16px; margin: 0; }
-@media (prefers-reduced-motion: reduce) { #poster, #hint, #bar i { transition: none; } }
+dd.n { font-family: var(--mono); font-size: 13px; font-variant-numeric: tabular-nums; }
+.gest { display: grid; grid-template-columns: auto minmax(0, 1fr); gap: 8px 16px; margin: 0; }
+@media (prefers-reduced-motion: reduce) { #poster, #hint, #bar i, #plan, .chip { transition: none; } }
 </style>
 
 <div id="stage" aria-label="3D scan of Rijksakademie A55. Look around with touch gestures or the mouse."></div>
