@@ -193,20 +193,24 @@ dd.n { font-family: var(--mono); font-size: 13px; font-variant-numeric: tabular-
 <script src="js/gaussian-splats-3d.umd.js"></script>
 <script>
 const LEVELS = {
-  lite:     { name: 'Smooth',  note: 'Phones and mobile data', chunks: ['splat/lite/part00.wasm'], count: 289627, bytes: 9268064 },
-  standard: { name: 'Standard', note: 'Newer phones and tablets',   chunks: ['splat/standard/part00.wasm', 'splat/standard/part01.wasm'], count: 574691, bytes: 18390112 },
-  full:     { name: 'High',    note: 'Computers, full detail',   chunks: ['splat/full/part00.wasm', 'splat/full/part01.wasm', 'splat/full/part02.wasm'], count: 1112022, bytes: 35584704 },
+  lite:     { name: 'Smooth',  note: 'Phones and mobile data', chunks: ['splat/lite/part00.wasm'], count: 214823, bytes: 6874336 },
+  standard: { name: 'Standard', note: 'Newer phones and tablets',   chunks: ['splat/standard/part00.wasm'], count: 429647, bytes: 13748704 },
+  full:     { name: 'High',    note: 'Computers, full detail',   chunks: ['splat/full/part00.wasm', 'splat/full/part01.wasm'], count: 859294, bytes: 27497408 },
 };
 // room frame: Z up, metres, the floor at z -1.43
 const VIEWS = [
   // overview: the ceiling fades out and the camera looks down into the room from above, like a dollhouse
   { id: 'overview', name: 'Overview', pos: [1.7, 1.0, 6.3], look: [-0.35, 1.0, -1.43],
     portrait: { pos: [-0.48, -1.6, 8.4], look: [-0.48, 0.7, -1.43] },        // a tall screen looks along the room's long side
-    text: 'Studio A55 at the Rijksakademie, about 4.8 × 7.4 m, seen from above with the ceiling lifted away. Four tall windows line one long wall, with a workstation at one end and a sofa corner at the other. Pick an area below for a closer look.' },
-  { id: 'desk',     name: 'Desk', pos: [0.55, 2.05, 0.07], look: [-0.65, 4.25, -0.61], text: 'A white sit-stand desk with three monitors, one turned upright, between a pair of studio speakers. A microphone, a floor lamp and a red high-back chair complete the workstation.' },
-  { id: 'sofa',     name: 'Sofa', pos: [0.95, -0.35, -0.18], look: [-0.35, -2.35, -0.98], text: 'A dark leather two-seater against the end wall, beside a small wooden side table with a kettle and mugs. Cardboard boxes wait on the floor.' },
-  { id: 'shelf',    name: 'Shelves', pos: [-0.55, -0.75, 0.02], look: [-2.15, -2.55, -0.58], text: 'A galvanised steel shelving unit in the corner holds boxes, electronics and packing material, with a wire drawer unit tucked under the window next to it.' },
-  { id: 'windows',  name: 'Windows', pos: [-0.55, 0.05, -0.18], look: [-2.85, 1.2, -0.38], text: 'Four tall arched windows with white roller blinds run along this wall, each with a radiator underneath. They fill the studio with daylight.' },
+    text: 'Studio A55 at the Rijksakademie, about 4.8 × 7.4 m, seen from above with the ceiling lifted away. Four tall arched windows line one long wall, the workstation fills one end and a sofa sits at the other. Pick an area below for a closer look.' },
+  { id: 'desk',     name: 'Desk', pos: [0.5, 1.9, 0.15], look: [-0.7, 4.3, -0.55],
+    text: 'A white sit-stand desk with three monitors, one turned upright, between a pair of studio speakers. A microphone arm, a stool and a floor lamp complete the workstation, with equipment cases stacked alongside.' },
+  { id: 'sofa',     name: 'Sofa', pos: [-0.2, 1.6, -0.05], look: [-0.55, -0.9, -0.95],
+    text: 'A dark leather two-seater against the end wall, with a small wooden side table beside it. A few bags rest on the seat.' },
+  { id: 'shelf',    name: 'Shelves', pos: [-0.4, 1.9, 0.2], look: [-2.5, 4.3, -0.35],
+    text: 'A galvanised steel shelving unit in the corner by the windows holds a studio speaker, books and supplies, with a drawer unit and a grey hard case beside it.' },
+  { id: 'windows',  name: 'Windows', pos: [0.9, 0.6, 0.0], look: [-2.87, 1.3, -0.3],
+    text: 'Four tall arched windows with radiators beneath light the studio. A camera on a tripod, a red high-back chair and a fan stand in front of them.' },
 ];
 const ROOM = { x: [-2.72, 1.76], y: [-2.56, 4.55], z: [-1.33, 2.2] };     // cameras stay inside the walls
 // above the walls the camera may leave the room's footprint; it may not sink below the wall tops out there
