@@ -94,6 +94,13 @@ button:focus-visible { outline: 1.5px solid var(--fg); outline-offset: 2px; }
 @media (hover: hover) { .chip:not([aria-current="true"]):not([aria-pressed="true"]):hover { background: rgba(40, 40, 40, .62); color: #fff; } }
 @media (max-width: 420px) { .chip { padding: 0 10px; font-size: 13.5px; } .chips { gap: 4px; } #caption p { font-size: 13px; } }
 @media (min-width: 760px) { #caption { margin-left: auto; margin-right: auto; } #plan { width: 128px; } .brand h1 { font-size: 17px; } }
+/* desktop: larger caption on the left, vertically centred, clear of the chips and the mini map */
+@media (min-width: 760px) and (min-height: 461px) {
+  #caption { position: fixed; left: calc(var(--gutter-l) + 16px); top: 50%; width: min(460px, 36vw); margin: 0; padding: 20px 24px 22px; border-radius: 16px; transform: translateY(-50%); }
+  #caption.gone { transform: translate(-10px, -50%); }
+  #caption h2 { font-size: 13px; margin-bottom: 8px; }
+  #caption p { font-size: 18px; line-height: 1.55; }
+}
 /* short landscape phones: keep the scan visible */
 @media (max-height: 460px) { #plan { width: 72px; top: calc(62px + var(--top)); } .rail { padding-top: 8px; padding-bottom: calc(8px + var(--bottom)); } #hint { display: none; } #caption p { font-size: 12.5px; } #caption { padding: 8px 12px 9px; margin-bottom: 6px; } .top { padding-bottom: 8px; } }
 
